@@ -1,14 +1,14 @@
+using System;
+using MediaBrowser.Api;
 using MediaBrowser.Controller.Collections;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
 using Microsoft.Extensions.Logging;
-using MediaBrowser.Api;
-using System;
 
-namespace Jellyfin.Plugin.TMDbBoxSets.Api
+namespace Jellyfin.Plugin.MergeVersions.Api
 {
     [Route("/TMDbBoxSets/Refresh", "POST", Summary = "Scans all movies and creates box sets")]
     [Authenticated]

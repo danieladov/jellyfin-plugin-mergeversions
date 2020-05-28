@@ -2,21 +2,22 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.MergeVersions.Api;
+using MediaBrowser.Api;
 using MediaBrowser.Controller.Collections;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
-using MediaBrowser.Api;
 
-namespace Jellyfin.Plugin.TMDbBoxSets.ScheduledTasks
+namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
 {
     public class RefreshLibraryTask : IScheduledTask
     {
         private readonly ILogger _logger;
-        private readonly MergeVersionsManager _tmDbBoxSetManager;
+        private readonly MergeVersionsManager _mergeVersionsManager;
 
         public RefreshLibraryTask(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
             IHttpResultFactory httpResultFactory,
@@ -25,16 +26,16 @@ namespace Jellyfin.Plugin.TMDbBoxSets.ScheduledTasks
             IAuthorizationContext authContext)
         {
             _logger = logger;
-            _tmDbBoxSetManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
+            _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
              httpResultFactory,
              userManager,
              dtoService,
-             authContext, new Api.GetId());
+             authContext, new GetId());
         }
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             _logger.LogInformation("Starting plugin refresh library task");
-            _tmDbBoxSetManager.ScanLibrary(progress);
+            _mergeVersionsManager.ScanLibrary(progress);
             _logger.LogInformation("plugin refresh library task finished");
             return Task.CompletedTask;
         }
