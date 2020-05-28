@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <AssemblyVersion>5.0.0</AssemblyVersion>
+    <FileVersion>5.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BDInfo" Version="0.7.6.1" />
+    <PackageReference Include="Jellyfin.Common" Version="10.5.5" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.5.5" />
+    <PackageReference Include="Jellyfin.Model" Version="10.5.5" />
+    <PackageReference Include="Jellyfin.Naming" Version="10.5.5" />
+    <PackageReference Include="Jellyfin.XmlTv" Version="10.4.3" />
+    <PackageReference Include="SQLitePCL.pretty.netstandard" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Configuration\configurationpage.html" />
+    <EmbeddedResource Include="Configuration\configurationpage.html" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="MediaBrowser.Api">
+      <HintPath>..\..\..\..\..\..\..\..\..\Program Files\Jellyfin\Server\MediaBrowser.Api.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="tests\" />
+  </ItemGroup>
+
+</Project>
