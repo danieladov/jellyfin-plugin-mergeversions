@@ -83,7 +83,7 @@ namespace Jellyfin.Plugin.MergeVersions
                 progress?.Report((int)percent);
 
                 _logger.LogInformation($"Merging {m.Key.OriginalTitle} ({m.Key.ProductionYear})");
-                MergeMovies(m.ToList());
+                MergeMovies(m.ToList().Where(m => m.PrimaryVersionId == null));//We only want non merged movies
             }
             progress?.Report(100);
         }
@@ -94,9 +94,12 @@ namespace Jellyfin.Plugin.MergeVersions
             {
                 Ids = String.Join(',', movies.Select(m => m.Id))
             };
-            _logger.LogDebug($"ids are {mv.Ids}\nMerging...");
-            _videoService.Post(mv);
-            _logger.LogDebug("merged");
+            if (movies.Count() > 1)
+            {
+                _logger.LogDebug($"ids are {mv.Ids}\nMerging...");
+                _videoService.Post(mv);
+                _logger.LogDebug("merged");
+            }
         }
 
         private void OnTimerElapsed()
