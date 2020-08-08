@@ -5,15 +5,17 @@
     <IsPackable>true</IsPackable>
     <AssemblyVersion>5.0.0</AssemblyVersion>
     <FileVersion>5.0.0</FileVersion>
+    <Authors />
+    <Company />
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BDInfo" Version="0.7.6.1" />
-    <PackageReference Include="Jellyfin.Common" Version="10.5.5" />
-    <PackageReference Include="Jellyfin.Controller" Version="10.5.5" />
-    <PackageReference Include="Jellyfin.Model" Version="10.5.5" />
-    <PackageReference Include="Jellyfin.Naming" Version="10.5.5" />
-    <PackageReference Include="Jellyfin.XmlTv" Version="10.4.3" />
+    <PackageReference Include="Jellyfin.Common" Version="10.6.0" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.6.0" />
+    <PackageReference Include="Jellyfin.Model" Version="10.6.0" />
+    <PackageReference Include="Jellyfin.Naming" Version="10.6.0" />
+    <PackageReference Include="Jellyfin.XmlTv" Version="10.6.2" />
     <PackageReference Include="SQLitePCL.pretty.netstandard" Version="2.1.0" />
   </ItemGroup>
 
