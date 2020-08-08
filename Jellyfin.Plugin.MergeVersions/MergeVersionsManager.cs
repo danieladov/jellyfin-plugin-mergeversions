@@ -87,8 +87,34 @@ namespace Jellyfin.Plugin.MergeVersions
             }
             progress?.Report(100);
         }
+        public void SplitLibrary(IProgress<double> progress)
+		{
+            var movies = GetMoviesFromLibrary().ToArray();
+            var total = movies.Count();
+            var current = 0;
+            //foreach grouping, merge
+            foreach (var m in movies)
+            {
+                current++;
+                var percent = ((double)current / (double)total) * 100;
+                progress?.Report((int)percent);
 
-        private void MergeMovies(IEnumerable<BaseItem> movies)
+                _logger.LogInformation($"Spliting {m.OriginalTitle} ({m.ProductionYear})");
+                SplitMovie(m);
+            }
+            progress?.Report(100);
+
+        }
+
+		private void SplitMovie(Movie m)
+		{
+            var das = new MediaBrowser.Api.DeleteAlternateSources();
+            das.Id = m.Id.ToString();
+            _videoService.Delete(das);
+            
+        }
+
+		private void MergeMovies(IEnumerable<BaseItem> movies)
         {
             var mv = new MediaBrowser.Api.MergeVersions
             {
