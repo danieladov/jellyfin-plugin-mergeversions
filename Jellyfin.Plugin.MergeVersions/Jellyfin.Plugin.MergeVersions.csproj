@@ -5,6 +5,8 @@
     <IsPackable>true</IsPackable>
     <AssemblyVersion>5.0.0</AssemblyVersion>
     <FileVersion>5.0.0</FileVersion>
+    <Authors />
+    <Company />
   </PropertyGroup>
 
   <ItemGroup>
