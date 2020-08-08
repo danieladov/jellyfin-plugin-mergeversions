@@ -6,9 +6,9 @@ Jellyfin Merge Versions plugin is a plugin that automatically groups every repea
 
 </p>
 ## Install Process
-1.Download the .zip file from release page
-2.Extract it and place the .dll file in a folder called ```plugins/Merge Versions``` under  the program data directory or inside the portable install directory
-3.Restart Jellyfin
+1. Download the .zip file from release page
+2. Extract it and place the .dll file in a folder called ```plugins/Merge Versions``` under  the program data directory or inside the portable install directory
+3. Restart Jellyfin
 
 ## Build Process
 1. Clone or download this repository
