@@ -10,19 +10,26 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MergeVersions.Api
 {
-    [Route("/TMDbBoxSets/Refresh", "POST", Summary = "Scans all movies and creates box sets")]
+    [Route("/MergeVersions/Refresh", "POST", Summary = "Scans all movies and creates box sets")]
     
 
-    [Route("/TMDbBoxSets/split", "DELETE", Summary = "Splits all merged movies")]
+    
 
     [Authenticated]
     public class RefreshMetadataRequest : IReturnVoid
     {
     }
+
+    
     public class GetId 
     {
         [ApiMember(Name = "Id", Description = "Item Id", IsRequired = true, DataType = "string", ParameterType = "path", Verb = "GET")]
         public Guid Id { get; set; }
+    }
+
+    [Route("/MergeVersions/Split", "DELETE", Summary = "Splits all merged movies")]
+    public class SplitRequest : IReturnVoid
+    {
     }
 
     public class MergeVersionsService : IService
@@ -52,7 +59,7 @@ namespace Jellyfin.Plugin.MergeVersions.Api
             _logger.LogInformation("Completed refresh");
         }
 
-        public void Delete(RefreshMetadataRequest request)
+        public void Delete(SplitRequest request)
         {
             _logger.LogInformation("Spliting all movies");
             _mergeVersionsManager.SplitLibrary(progress);
