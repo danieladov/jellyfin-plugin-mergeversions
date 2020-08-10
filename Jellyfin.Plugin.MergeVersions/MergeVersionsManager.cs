@@ -164,7 +164,7 @@ namespace Jellyfin.Plugin.MergeVersions
                 progress?.Report((int)percent);
 
                 _logger.LogInformation($"Merging {e.Key.IndexNumber} ({e.Key.SeriesName})");
-                MergeVideos(e.ToList().Where(e => e.PrimaryVersionId == null || e.GetLinkedAlternateVersions().Count()==0));//We only want non merged movies
+                MergeVideos(e.ToList().Where(e => e.PrimaryVersionId == null && e.GetLinkedAlternateVersions().Count()==0));//We only want non merged movies
             }
             progress?.Report(100);
         }
