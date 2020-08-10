@@ -10,6 +10,7 @@ using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Plugins;
@@ -63,7 +64,21 @@ namespace Jellyfin.Plugin.MergeVersions
             return movies.ToList();
         }
 
-        public void ScanLibrary(IProgress<double> progress)
+        private IEnumerable<Episode> GetEpisodesFromLibrary()
+		{
+            var episodes = _libraryManager.GetItemList(new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { nameof(Episode) },
+                IsVirtualItem = false,
+                Recursive = true,
+
+            }).Select(m => m as Episode);
+
+            return episodes.ToList();
+        
+    }
+
+        public void MergeMovies(IProgress<double> progress)
         {
             var movies = GetMoviesFromLibrary().ToArray();
             //var baseItems = new List<BaseItem>();
@@ -82,12 +97,12 @@ namespace Jellyfin.Plugin.MergeVersions
                 var percent = ((double) current / (double) total) * 100;
                 progress?.Report((int)percent);
 
-                _logger.LogInformation($"Merging {m.Key.OriginalTitle} ({m.Key.ProductionYear})");
-                MergeMovies(m.ToList().Where(m => m.PrimaryVersionId == null));//We only want non merged movies
+                MergeVideos(m.Where(m => m.PrimaryVersionId == null && m.GetLinkedAlternateVersions().Count() == 0).ToList());//We only want non merged movies
+                    
             }
             progress?.Report(100);
         }
-        public void SplitLibrary(IProgress<double> progress)
+        public void SplitMovies(IProgress<double> progress)
 		{
             var movies = GetMoviesFromLibrary().ToArray();
             var total = movies.Count();
@@ -100,32 +115,77 @@ namespace Jellyfin.Plugin.MergeVersions
                 progress?.Report((int)percent);
 
                 _logger.LogInformation($"Spliting {m.OriginalTitle} ({m.ProductionYear})");
-                SplitMovie(m);
+                SplitVideo(m);
             }
             progress?.Report(100);
 
         }
 
-		private void SplitMovie(Movie m)
+		private void SplitVideo(BaseItem v)
 		{
             var das = new MediaBrowser.Api.DeleteAlternateSources();
-            das.Id = m.Id.ToString();
+            das.Id = v.Id.ToString();
             _videoService.Delete(das);
             
         }
 
-		private void MergeMovies(IEnumerable<BaseItem> movies)
+		private void MergeVideos(IEnumerable<BaseItem> videos)
         {
+            
+            
             var mv = new MediaBrowser.Api.MergeVersions
             {
-                Ids = String.Join(',', movies.Select(m => m.Id))
+                Ids = String.Join(',', videos.Select(m => m.Id))
             };
-            if (movies.Count() > 1)
+            if (videos.Count() > 1)
             {
+                _logger.LogInformation($"Merging {videos.ElementAt(0).OriginalTitle} ({videos.ElementAt(0).ProductionYear})");
                 _logger.LogDebug($"ids are {mv.Ids}\nMerging...");
                 _videoService.Post(mv);
                 _logger.LogDebug("merged");
             }
+        }
+
+        public void MergeEpisodes(IProgress<double> progress)
+        {
+            var episodes = GetEpisodesFromLibrary().ToArray();
+
+            _logger.LogInformation("Scanning for repeated episodes");
+
+            //Group by the Series name, Season name , episode name, episode number and year, then select those with more than 1 in the group
+            var duplications = episodes.GroupBy(x => new {x.SeriesName,x.SeasonName, x.OriginalTitle,x.IndexNumber, x.ProductionYear }).Where(x => x.Count() > 1).ToList();
+            var total = duplications.Count();
+            var current = 0;
+            //foreach grouping, merge
+            foreach (var e in duplications)
+            {
+                current++;
+                var percent = ((double)current / (double)total) * 100;
+                progress?.Report((int)percent);
+
+                _logger.LogInformation($"Merging {e.Key.IndexNumber} ({e.Key.SeriesName})");
+                MergeVideos(e.ToList().Where(e => e.PrimaryVersionId == null || e.GetLinkedAlternateVersions().Count()==0));//We only want non merged movies
+            }
+            progress?.Report(100);
+        }
+
+        public void SplitEpisodes(IProgress<double> progress)
+        {
+            var episodes = GetEpisodesFromLibrary().ToArray();
+            var total = episodes.Count();
+            var current = 0;
+            //foreach grouping, merge
+            foreach (var e in episodes)
+            {
+                current++;
+                var percent = ((double)current / (double)total) * 100;
+                progress?.Report((int)percent);
+
+                _logger.LogInformation($"Spliting {e.IndexNumber} ({e.SeriesName})");
+                SplitVideo(e);
+            }
+            progress?.Report(100);
+
         }
 
         private void OnTimerElapsed()

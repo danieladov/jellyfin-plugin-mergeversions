@@ -23,9 +23,13 @@
                     </div>
                     <br />
                     <button is="emby-button" type="button" class="raised block" id="refresh-library"
-                        onclick=mergeAll()><span>Merge All Movies</span></button>
+                        onclick=mergeMovies()><span>Merge All Movies</span></button>
                     <button is="emby-button" type="button" class="raised block" id="split-library"
-                        onclick=splitAll()><span>Split All Movies</span></button>
+                        onclick=splitMovies()><span>Split All Movies</span></button>
+                    <button is="emby-button" type="button" class="raised block" id="split-library"
+                        onclick=mergeEpisodes()><span>Merge All Episodes</span></button>
+                    <button is="emby-button" type="button" class="raised block" id="split-library"
+                        onclick=splitEpisodes()><span>Split All Episodes</span></button>
                 </form>
             </div>
         </div>
@@ -39,14 +43,29 @@
             var pluginId = "f21bbed8-3a97-4d8b-88b2-48aaa65427cb";
 
             
-            function mergeAll() {
+            function mergeMovies() {
                 var request = {
                     url: ApiClient.getUrl('MergeVersions/Refresh'),
                     type: 'POST'
                 };
 
                 ApiClient.fetch(request).then(function () {
-                    Dashboard.alert("Library scan queued");
+                    Dashboard.alert("Merging Movies...");
+                }).catch(function () {
+                    Dashboard.alert({
+                        message: "Unexpected error occurred!"
+                    });
+                });
+            }
+
+            function mergeEpisodes() {
+                var request = {
+                    url: ApiClient.getUrl('MergeVersions/MergeEpisodes'),
+                    type: 'POST'
+                };
+
+                ApiClient.fetch(request).then(function () {
+                    Dashboard.alert("Merging Episodes...);
                 }).catch(function () {
                     Dashboard.alert({
                         message: "Unexpected error occurred!"
@@ -55,13 +74,27 @@
             }
 
 
-            function splitAll() {
+            function splitMovies() {
                 var request = {
-                    url: ApiClient.getUrl('MergeVersions/Split'),
+                    url: ApiClient.getUrl('MergeVersions/splitMovies'),
                     type: 'DELETE'
                 };
                 ApiClient.fetch(request).then(function () {
-                    Dashboard.alert("Splitting started!");
+                    Dashboard.alert("Splitting Movies");
+                }).catch(function () {
+                    Dashboard.alert({
+                        message: "Unexpected error occurred!"
+                    });
+                });
+            }
+
+            function splitEpisodes() {
+                var request = {
+                    url: ApiClient.getUrl('MergeVersions/splitEpisodes'),
+                    type: 'DELETE'
+                };
+                ApiClient.fetch(request).then(function () {
+                    Dashboard.alert("Splitting Episodes");
                 }).catch(function () {
                     Dashboard.alert({
                         message: "Unexpected error occurred!"

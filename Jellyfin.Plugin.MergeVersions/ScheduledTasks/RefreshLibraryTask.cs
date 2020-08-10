@@ -14,12 +14,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
 {
-    public class RefreshLibraryTask : IScheduledTask
+    public class MergeMoviesTask : IScheduledTask
     {
         private readonly ILogger _logger;
         private readonly MergeVersionsManager _mergeVersionsManager;
 
-        public RefreshLibraryTask(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
+        public MergeMoviesTask(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
@@ -34,9 +34,9 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         }
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.LogInformation("Starting plugin refresh library task");
-            _mergeVersionsManager.ScanLibrary(progress);
-            _logger.LogInformation("plugin refresh library task finished");
+            _logger.LogInformation("Starting plugin, Merging Movies");
+            _mergeVersionsManager.MergeMovies(progress);
+            _logger.LogInformation("All movies merged");
             return Task.CompletedTask;
         }
 
@@ -48,19 +48,19 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             };
         }
 
-        public string Name => "Scan library to merge repeated movies";
-        public string Key => "MergeVersionsRefreshLibraryTask";
+        public string Name => "Merge All Movies";
+        public string Key => "MergeMoviesTask";
         public string Description => "Scans all libraries to merge repeated movies";
         public string Category => "Merge Versions";
     }
 
 
-    public class SplitLibraryTask : IScheduledTask
+    public class MergeEpisodesTask : IScheduledTask
     {
         private readonly ILogger _logger;
         private readonly MergeVersionsManager _mergeVersionsManager;
 
-        public SplitLibraryTask(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
+        public MergeEpisodesTask(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
@@ -75,9 +75,9 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         }
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.LogInformation("Starting plugin refresh library task");
-            _mergeVersionsManager.SplitLibrary(progress);
-            _logger.LogInformation("plugin refresh library task finished");
+            _logger.LogInformation("Starting plugin, Merging Episodes");
+            _mergeVersionsManager.MergeEpisodes(progress);
+            _logger.LogInformation("Merging Episodes task finished");
             return Task.CompletedTask;
         }
 
@@ -89,9 +89,9 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             };
         }
 
-        public string Name => "Split all merged movies";
-        public string Key => "SplitLibraryTask";
-        public string Description => "Splits all merged movies";
+        public string Name => "Merge All Episodes";
+        public string Key => "MergeEpisodesTask";
+        public string Description => "Merges all repeated episodes";
         public string Category => "Merge Versions";
     }
 }
