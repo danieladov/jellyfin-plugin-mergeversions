@@ -21,6 +21,12 @@ Jellyfin Merge Versions plugin is a plugin that automatically groups every repea
 2. Extract it and place the .dll file in a folder called ```plugins/Merge Versions``` under  the program data directory or inside the portable install directory
 3. Restart Jellyfin
 
+## Use Guide
+1. To merge your movies or episodes you can do it from Schedule task or directly from the configuration of the plugin.
+2. Spliting is only avaible through the configuration
+
+
+
 ## Build Process
 1. Clone or download this repository
 2. Ensure you have .NET Core SDK setup and installed
