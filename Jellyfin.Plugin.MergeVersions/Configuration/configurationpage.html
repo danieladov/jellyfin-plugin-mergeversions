@@ -29,7 +29,7 @@
                     </div>
 
                     <div>
-                        <button onclick = save() is="emby-button" type="submit" class="raised button-submit block"><span>${ButtonSave}</span></button>
+                        <button onclick = save() is="emby-button" type="submit" class="raised button-submit block"><span>Save</span></button>
                     </div>
 
                     <button is="emby-button" type="button" class="raised block" id="refresh-library"
@@ -117,7 +117,7 @@
                              config = savedConfig;
 
                              if (!config) {
-                                config.SelectedVirtualFolders =[];
+                                config.selectedVirtualFolders =[];
                              }
 
                              ApiClient.getVirtualFolders().then(function (virtualFolders) {
