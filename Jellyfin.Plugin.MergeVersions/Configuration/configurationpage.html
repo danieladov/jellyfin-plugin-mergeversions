@@ -22,6 +22,16 @@
                         <br />
                     </div>
                     <br />
+                    <div>
+                        <h3 class="checkboxListLabel">Select libraries:</h3>
+                        <div id="divTraktLocations" class="paperList checkboxList checkboxList-paperList">
+                        </div>
+                    </div>
+
+                    <div>
+                        <button onclick = save() is="emby-button" type="submit" class="raised button-submit block"><span>${ButtonSave}</span></button>
+                    </div>
+
                     <button is="emby-button" type="button" class="raised block" id="refresh-library"
                         onclick=mergeMovies()><span>Merge All Movies</span></button>
                     <button is="emby-button" type="button" class="raised block" id="split-library"
@@ -101,6 +111,84 @@
                     });
                 });
             }
+            var config = undefined;
+
+            ApiClient.getPluginConfiguration(pluginId).then(function (savedConfig) {
+                             config = savedConfig;
+
+                             if (!config) {
+                                config.SelectedVirtualFolders =[];
+                             }
+
+                             ApiClient.getVirtualFolders().then(function (virtualFolders) {
+                               loadVirtualFolders(config, virtualFolders);
+                            });
+
+
+                            });
+
+            
+            
+            
+
+          
+            
+
+            function loadVirtualFolders(config, virtualFolders){
+                var page = $.mobile.activePage;
+                var html = "";
+                        html += '<div data-role="controlgroup">';
+                        for (var i = 0, length = virtualFolders.length; i < length; i++) {
+                            var virtualFolder = virtualFolders[i];
+                            html += getFolderHtml(config, virtualFolder, i);
+                        }
+                        html += '</div>';
+                        $('#divTraktLocations', page).html(html).trigger('create');
+
+            }
+
+            function getFolderHtml(config,virtualFolder, index){
+                var html = "";
+                var id = "chkFolder" + index;
+                var name = virtualFolder.Name;
+                var isChecked = config.selectedVirtualFolders.filter(function (current) {
+                                return current.toString().toLowerCase() == name.toString().toLowerCase();
+                            }).length;
+
+                var checkedAttribute = isChecked ? 'checked="checked"' : "";
+                html += '<label><input is="emby-checkbox" class="chkLibrary" type="checkbox" data-mini="true" id="' + id + '" name="' + id +  '" data-name="' + name +'" ' + checkedAttribute + ' /><span>' + name +  '</span></label>';
+                return html;            
+            }
+
+            function save(){             
+                    var folders = $('.chkLibrary:checked').map(function () {
+                        return this.getAttribute('data-name');
+                    }).get();
+
+                    
+
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config){
+                        config.selectedVirtualFolders = folders;
+                        ApiClient.updatePluginConfiguration(pluginId,config).then(function (res){
+                            Dashboard.processPluginConfigurationUpdateResult(res);});
+                    });
+                    
+                              
+                    }
+
+                    
+
+                
+
+                 
+                
+
+
+
+                
+
+            
+           
                 
             
         </script>

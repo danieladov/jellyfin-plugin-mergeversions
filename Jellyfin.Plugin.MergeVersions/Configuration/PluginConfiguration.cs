@@ -1,14 +1,17 @@
 ﻿using MediaBrowser.Model.Plugins;
+using MediaBrowser.Model.Entities;
+using System;
 
 namespace Jellyfin.Plugin.MergeVersions.Configuration
 {
     public class PluginConfiguration : BasePluginConfiguration
     {
-        public int MinimumNumberOfMovies { get; set; }
+
+        public String[] selectedVirtualFolders { get; set; }
 
         public PluginConfiguration()
         {
-            MinimumNumberOfMovies = 2;
+            selectedVirtualFolders = Array.Empty<String>();
         }
     }
 }
