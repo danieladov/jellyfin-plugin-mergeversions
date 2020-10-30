@@ -6,6 +6,7 @@ using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
+using MediaBrowser.Model.IO;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MergeVersions.Api
@@ -21,11 +22,7 @@ namespace Jellyfin.Plugin.MergeVersions.Api
     }
 
     
-    public class GetId 
-    {
-        [ApiMember(Name = "Id", Description = "Item Id", IsRequired = true, DataType = "string", ParameterType = "path", Verb = "GET")]
-        public Guid Id { get; set; }
-    }
+   
 
     [Route("/MergeVersions/SplitMovies", "DELETE", Summary = "Splits all merged movies")]
     public class SplitMoviesRequest : IReturnVoid
@@ -53,13 +50,16 @@ namespace Jellyfin.Plugin.MergeVersions.Api
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
-            IAuthorizationContext authContext)
+            IAuthorizationContext authContext,
+            IFileSystem fileSystem
+            )
         {
             _mergeVersionsManager = new MergeVersionsManager( libraryManager,  collectionManager,  logger,  serverConfigurationManager,
              httpResultFactory,
              userManager,
              dtoService,
-             authContext,new GetId());
+             authContext,
+             fileSystem);
             _logger = logger;
         }
         

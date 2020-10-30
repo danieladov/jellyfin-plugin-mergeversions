@@ -11,6 +11,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
+using MediaBrowser.Model.IO;
 
 namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
 {
@@ -23,14 +24,17 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
-            IAuthorizationContext authContext)
+            IAuthorizationContext authContext,
+            IFileSystem fileSystem
+            )
         {
             _logger = logger;
             _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
              httpResultFactory,
              userManager,
              dtoService,
-             authContext, new GetId());
+             authContext,
+             fileSystem);
         }
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
@@ -64,14 +68,16 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
-            IAuthorizationContext authContext)
+            IAuthorizationContext authContext,
+            IFileSystem fileSystem)
         {
             _logger = logger;
             _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
              httpResultFactory,
              userManager,
              dtoService,
-             authContext, new GetId());
+             authContext,
+             fileSystem);
         }
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
