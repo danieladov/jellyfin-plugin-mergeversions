@@ -7,11 +7,11 @@ namespace Jellyfin.Plugin.MergeVersions.Configuration
     public class PluginConfiguration : BasePluginConfiguration
     {
 
-        public String[] selectedVirtualFolders { get; set; }
+        public String[] LocationsExcluded { get; set; }
 
         public PluginConfiguration()
         {
-            selectedVirtualFolders = Array.Empty<String>();
+            LocationsExcluded = Array.Empty<String>();
         }
     }
 }

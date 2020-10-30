@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.MergeVersions.Api;
+using MediaBrowser.Model.IO;
 using MediaBrowser.Api;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Configuration;
@@ -15,8 +16,6 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Controller.Session;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Querying;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MergeVersions
@@ -27,25 +26,28 @@ namespace Jellyfin.Plugin.MergeVersions
         private readonly VideosService _videoService;
         private readonly Timer _timer;
         private readonly ILogger<VideosService> _logger; // TODO logging
-        private readonly UserService _userservice;
         private readonly IUserManager _userManager;
         private readonly SessionInfo _session;
         private readonly ISessionManager _sessionManager;
+        private readonly IFileSystem _fileSystem;
 
 
         public MergeVersionsManager(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
-            IAuthorizationContext authContext, GetId request)
+            IAuthorizationContext authContext,
+            IFileSystem fileSystem)
         {
-            var id = request.Id;
+            
+            
             _session = new SessionInfo(_sessionManager, logger);
             _libraryManager = libraryManager;
             _userManager = userManager;
             _logger = logger;
             _timer = new Timer(_ => OnTimerElapsed(), null, Timeout.Infinite, Timeout.Infinite);
             _videoService = new VideosService(_logger, serverConfigurationManager, httpResultFactory, libraryManager, userManager, dtoService, authContext);
+            _fileSystem = fileSystem;       
         }
 
 
@@ -57,7 +59,9 @@ namespace Jellyfin.Plugin.MergeVersions
                 IncludeItemTypes = new[] {nameof(Movie)},
                 IsVirtualItem = false,
                 Recursive = true,
-                HasTmdbId = true
+                HasTmdbId = true,
+                
+                
 
             }).Select(m => m as Movie);
 
@@ -131,13 +135,21 @@ namespace Jellyfin.Plugin.MergeVersions
 
 		private void MergeVideos(IEnumerable<BaseItem> videos)
         {
-            
+            List<BaseItem> elegibleToMerge = new List<BaseItem>();
+
+            foreach (var video in videos)
+			{
+				if (isElegible(video))
+				{
+                    elegibleToMerge.Add(video);
+				}
+			}
             
             var mv = new MediaBrowser.Api.MergeVersions
             {
-                Ids = String.Join(',', videos.Select(m => m.Id))
+                Ids = String.Join(',', elegibleToMerge.Select(m => m.Id))
             };
-            if (videos.Count() > 1)
+            if (elegibleToMerge.Count() > 1)
             {
                 _logger.LogInformation($"Merging {videos.ElementAt(0).OriginalTitle} ({videos.ElementAt(0).ProductionYear})");
                 _logger.LogDebug($"ids are {mv.Ids}\nMerging...");
@@ -154,7 +166,8 @@ namespace Jellyfin.Plugin.MergeVersions
 
             //Group by the Series name, Season name , episode name, episode number and year, then select those with more than 1 in the group
             var duplications = episodes.GroupBy(x => new {x.SeriesName,x.SeasonName, x.OriginalTitle,x.IndexNumber, x.ProductionYear }).Where(x => x.Count() > 1).ToList();
-            var total = duplications.Count();
+
+           var total = duplications.Count();
             var current = 0;
             //foreach grouping, merge
             foreach (var e in duplications)
@@ -186,6 +199,16 @@ namespace Jellyfin.Plugin.MergeVersions
             }
             progress?.Report(100);
 
+        }
+
+
+        private bool isElegible(BaseItem item)
+		{
+            if (Plugin.Instance.Configuration.LocationsExcluded != null && Plugin.Instance.Configuration.LocationsExcluded.Any(s => _fileSystem.ContainsSubPath(s, item.Path)))
+            {
+                return false;
+            }
+            return true;
         }
 
         private void OnTimerElapsed()
