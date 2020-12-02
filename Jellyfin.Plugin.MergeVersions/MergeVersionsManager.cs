@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.MergeVersions.Api;
 using MediaBrowser.Model.IO;
-using MediaBrowser.Api;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Dto;
@@ -16,38 +15,59 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Controller.Session;
+using MediaBrowser.Controller.Dlna;
+using MediaBrowser.Controller.Devices;
+using MediaBrowser.Controller.MediaEncoding;
 using Microsoft.Extensions.Logging;
+using Jellyfin.Api.Controllers;
+using Jellyfin.Api.Helpers;
+
+
 
 namespace Jellyfin.Plugin.MergeVersions
 {
     public class MergeVersionsManager : IServerEntryPoint
     {
         private readonly ILibraryManager _libraryManager;
-        private readonly VideosService _videoService;
+        private readonly VideosController _videosController;
         private readonly Timer _timer;
-        private readonly ILogger<VideosService> _logger; // TODO logging
+        private readonly ILogger<VideosController> _logger; // TODO logging
         private readonly IUserManager _userManager;
         private readonly SessionInfo _session;
-        private readonly ISessionManager _sessionManager;
         private readonly IFileSystem _fileSystem;
 
 
-        public MergeVersionsManager(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
+        public MergeVersionsManager(ILibraryManager libraryManager, 
+            ICollectionManager collectionManager, 
+            ILogger<VideosController> logger, 
+            IServerConfigurationManager serverConfigurationManager,
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
             IAuthorizationContext authContext,
-            IFileSystem fileSystem)
+            IFileSystem fileSystem,
+            IDlnaManager dlnaManager,
+            IMediaSourceManager mediaSourceManager,
+            IMediaEncoder mediaEncoder,
+            ISubtitleEncoder subtitleEncoder,
+            IDeviceManager deviceManager,
+            TranscodingJobHelper transcodingJobHelper
+
+
+            )
         {
             
             
-            _session = new SessionInfo(_sessionManager, logger);
+
             _libraryManager = libraryManager;
             _userManager = userManager;
             _logger = logger;
             _timer = new Timer(_ => OnTimerElapsed(), null, Timeout.Infinite, Timeout.Infinite);
-            _videoService = new VideosService(_logger, serverConfigurationManager, httpResultFactory, libraryManager, userManager, dtoService, authContext);
-            _fileSystem = fileSystem;       
+            _videosController = new VideosController(_libraryManager, _userManager, dtoService, dlnaManager, authContext,
+                mediaSourceManager, serverConfigurationManager, mediaEncoder, fileSystem, subtitleEncoder, null, deviceManager, transcodingJobHelper, null);
+
+
+               _fileSystem = fileSystem;       
         }
 
 
@@ -127,9 +147,7 @@ namespace Jellyfin.Plugin.MergeVersions
 
 		private void SplitVideo(BaseItem v)
 		{
-            var das = new MediaBrowser.Api.DeleteAlternateSources();
-            das.Id = v.Id.ToString();
-            _videoService.Delete(das);
+            _videosController.DeleteAlternateSources(v.Id);
             
         }
 
@@ -144,16 +162,17 @@ namespace Jellyfin.Plugin.MergeVersions
                     elegibleToMerge.Add(video);
 				}
 			}
-            
-            var mv = new MediaBrowser.Api.MergeVersions
-            {
-                Ids = String.Join(',', elegibleToMerge.Select(m => m.Id))
-            };
-            if (elegibleToMerge.Count() > 1)
+
+            Guid[] ids = null;
+           for (int i = 0; i < elegibleToMerge.Count; i++)
+			{
+                ids[i] = elegibleToMerge.ElementAt(i).Id;
+			}
+                if (elegibleToMerge.Count() > 1)
             {
                 _logger.LogInformation($"Merging {videos.ElementAt(0).OriginalTitle} ({videos.ElementAt(0).ProductionYear})");
-                _logger.LogDebug($"ids are {mv.Ids}\nMerging...");
-                _videoService.Post(mv);
+                _logger.LogDebug($"ids are {ids.ToString()}\nMerging...");
+				_videosController.MergeVersions(ids);
                 _logger.LogDebug("merged");
             }
         }

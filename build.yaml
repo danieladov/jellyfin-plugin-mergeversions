@@ -1,15 +1,15 @@
 ---
-name: "jellyfin-plugin-tmdbboxsets"
+name: "jellyfin-plugin-mergeVersions"
 guid: "bc4aad2e-d3d0-4725-a5e2-fd07949e5b42"
 version: "5" # Please increment with each pull request
-jellyfin_version: "10.5.0" # The earliest binary-compatible version
+jellyfin_version: "10.7.0" # The earliest binary-compatible version
 owner: "jellyfin"
-nicename: "TMDb Box Sets"
-description: "Automatically create movie box sets based on TMDb collections"
-overview: "Automatically create movie box sets based on TMDb collections"
-category: "Metadata"
+nicename: "Merge Versions"
+description: "Jellyfin Merge Versions plugin is a plugin that automatically groups every repeated movie;"
+overview: "Jellyfin Merge Versions plugin is a plugin that automatically groups every repeated movie;"
+category: "General"
 artifacts:
-  - "Jellyfin.Plugin.TMDbBoxSets.dll"
+  - "Jellyfin.Plugin.MergeVersions.dll"
 build_type: "dotnet"
 dotnet_configuration: "Release"
-dotnet_framework: "netstandard2.1"
+dotnet_framework: "net5.0"

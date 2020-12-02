@@ -12,6 +12,11 @@ using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 using MediaBrowser.Model.IO;
+using Jellyfin.Api.Controllers;
+using MediaBrowser.Controller.Dlna;
+using MediaBrowser.Controller.MediaEncoding;
+using MediaBrowser.Controller.Devices;
+using Jellyfin.Api.Helpers;
 
 namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
 {
@@ -20,12 +25,21 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly ILogger _logger;
         private readonly MergeVersionsManager _mergeVersionsManager;
 
-        public MergeMoviesTask(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
+        public MergeMoviesTask(ILibraryManager libraryManager,
+            ICollectionManager collectionManager,
+            ILogger<VideosController> logger,
+            IServerConfigurationManager serverConfigurationManager,
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
             IAuthorizationContext authContext,
-            IFileSystem fileSystem
+            IFileSystem fileSystem,
+            IDlnaManager dlnaManager,
+            IMediaSourceManager mediaSourceManager,
+            IMediaEncoder mediaEncoder,
+            ISubtitleEncoder subtitleEncoder,
+            IDeviceManager deviceManager,
+            TranscodingJobHelper transcodingJobHelper
             )
         {
             _logger = logger;
@@ -34,7 +48,13 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
              userManager,
              dtoService,
              authContext,
-             fileSystem);
+             fileSystem,
+             dlnaManager,
+             mediaSourceManager,
+             mediaEncoder,
+             subtitleEncoder,
+             deviceManager,
+             transcodingJobHelper);
         }
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
@@ -64,12 +84,21 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly ILogger _logger;
         private readonly MergeVersionsManager _mergeVersionsManager;
 
-        public MergeEpisodesTask(ILibraryManager libraryManager, ICollectionManager collectionManager, ILogger<VideosService> logger, IServerConfigurationManager serverConfigurationManager,
+        public MergeEpisodesTask(ILibraryManager libraryManager,
+            ICollectionManager collectionManager,
+            ILogger<VideosController> logger,
+            IServerConfigurationManager serverConfigurationManager,
             IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
             IAuthorizationContext authContext,
-            IFileSystem fileSystem)
+            IFileSystem fileSystem,
+            IDlnaManager dlnaManager,
+            IMediaSourceManager mediaSourceManager,
+            IMediaEncoder mediaEncoder,
+            ISubtitleEncoder subtitleEncoder,
+            IDeviceManager deviceManager,
+            TranscodingJobHelper transcodingJobHelper)
         {
             _logger = logger;
             _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
@@ -77,7 +106,13 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
              userManager,
              dtoService,
              authContext,
-             fileSystem);
+             fileSystem,
+             dlnaManager,
+             mediaSourceManager,
+             mediaEncoder,
+             subtitleEncoder,
+             deviceManager,
+             transcodingJobHelper);
         }
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
