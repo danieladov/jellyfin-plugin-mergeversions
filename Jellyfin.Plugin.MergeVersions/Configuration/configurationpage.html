@@ -86,7 +86,7 @@
 
             function splitMovies() {
                 var request = {
-                    url: ApiClient.getUrl('MergeVersions/splitMovies'),
+                    url: ApiClient.getUrl('MergeVersions/SplitMovies'),
                     type: 'DELETE'
                 };
                 ApiClient.fetch(request).then(function () {
@@ -100,7 +100,7 @@
 
             function splitEpisodes() {
                 var request = {
-                    url: ApiClient.getUrl('MergeVersions/splitEpisodes'),
+                    url: ApiClient.getUrl('MergeVersions/SplitEpisodes'),
                     type: 'DELETE'
                 };
                 ApiClient.fetch(request).then(function () {
