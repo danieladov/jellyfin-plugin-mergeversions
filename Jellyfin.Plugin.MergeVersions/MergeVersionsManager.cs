@@ -41,7 +41,6 @@ namespace Jellyfin.Plugin.MergeVersions
             ICollectionManager collectionManager, 
             ILogger<VideosController> logger, 
             IServerConfigurationManager serverConfigurationManager,
-            IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
             IAuthorizationContext authContext,
@@ -163,8 +162,8 @@ namespace Jellyfin.Plugin.MergeVersions
 				}
 			}
 
-            Guid[] ids = null;
-           for (int i = 0; i < elegibleToMerge.Count; i++)
+            Guid[] ids = new Guid[elegibleToMerge.Count];
+            for (int i = 0; i < elegibleToMerge.Count; i++)
 			{
                 ids[i] = elegibleToMerge.ElementAt(i).Id;
 			}

@@ -29,7 +29,6 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             ICollectionManager collectionManager,
             ILogger<VideosController> logger,
             IServerConfigurationManager serverConfigurationManager,
-            IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
             IAuthorizationContext authContext,
@@ -44,7 +43,6 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         {
             _logger = logger;
             _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
-             httpResultFactory,
              userManager,
              dtoService,
              authContext,
@@ -88,7 +86,6 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             ICollectionManager collectionManager,
             ILogger<VideosController> logger,
             IServerConfigurationManager serverConfigurationManager,
-            IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
             IAuthorizationContext authContext,
@@ -101,9 +98,7 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             TranscodingJobHelper transcodingJobHelper)
         {
             _logger = logger;
-            _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
-             httpResultFactory,
-             userManager,
+            _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,             userManager,
              dtoService,
              authContext,
              fileSystem,

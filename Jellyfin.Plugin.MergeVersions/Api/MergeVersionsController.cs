@@ -42,7 +42,6 @@ namespace Jellyfin.Plugin.MergeVersions.Api
             ICollectionManager collectionManager,
             ILogger<VideosController> logger,
             IServerConfigurationManager serverConfigurationManager,
-            IHttpResultFactory httpResultFactory,
             IUserManager userManager,
             IDtoService dtoService,
             IAuthorizationContext authContext,
@@ -57,7 +56,6 @@ namespace Jellyfin.Plugin.MergeVersions.Api
             )
         {
             _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
-             httpResultFactory,
              userManager,
              dtoService,
              authContext,
