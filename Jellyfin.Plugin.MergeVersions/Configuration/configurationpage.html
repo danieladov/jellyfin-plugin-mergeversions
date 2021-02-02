@@ -30,7 +30,7 @@
 
                    
                     <button is="emby-button" type="button" class="raised button-submit block emby-button" id="refresh-library"
-                        onclick=save()><span>${ButtonSave}</span></button>
+                        onclick=save()><span>Save</span></button>
 
                     <button is="emby-button" type="button" class="raised block" id="refresh-library"
                         onclick=mergeMovies()><span>Merge All Movies</span></button>
@@ -87,7 +87,7 @@
             function splitMovies() {
                 var request = {
                     url: ApiClient.getUrl('MergeVersions/SplitMovies'),
-                    type: 'DELETE'
+                    type: 'POST'
                 };
                 ApiClient.fetch(request).then(function () {
                     Dashboard.alert("Splitting Movies");
@@ -101,7 +101,7 @@
             function splitEpisodes() {
                 var request = {
                     url: ApiClient.getUrl('MergeVersions/SplitEpisodes'),
-                    type: 'DELETE'
+                    type: 'POST'
                 };
                 ApiClient.fetch(request).then(function () {
                     Dashboard.alert("Splitting Episodes");

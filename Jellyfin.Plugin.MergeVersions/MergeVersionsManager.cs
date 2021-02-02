@@ -110,7 +110,7 @@ namespace Jellyfin.Plugin.MergeVersions
             _logger.LogInformation("Scanning for repeated movies");
 
             //Group by the title and year, then select those with more than 1 in the group
-            var duplications = movies.GroupBy(x => new {x.OriginalTitle, x.ProductionYear}).Where(x => x.Count() > 1).ToList();
+            var duplications = movies.GroupBy(x => new {x.Name, x.ProductionYear}).Where(x => x.Count() > 1).ToList();
             var total = duplications.Count();
             var current = 0;
             //foreach grouping, merge
@@ -137,7 +137,7 @@ namespace Jellyfin.Plugin.MergeVersions
                 var percent = ((double)current / (double)total) * 100;
                 progress?.Report((int)percent);
 
-                _logger.LogInformation($"Spliting {m.OriginalTitle} ({m.ProductionYear})");
+                _logger.LogInformation($"Spliting {m.Name} ({m.ProductionYear})");
                 SplitVideo(m);
             }
             progress?.Report(100);
@@ -169,12 +169,24 @@ namespace Jellyfin.Plugin.MergeVersions
 			}
                 if (elegibleToMerge.Count() > 1)
             {
-                _logger.LogInformation($"Merging {videos.ElementAt(0).OriginalTitle} ({videos.ElementAt(0).ProductionYear})");
-                _logger.LogDebug($"ids are {ids.ToString()}\nMerging...");
+                _logger.LogInformation($"Merging {videos.ElementAt(0).Name} ({videos.ElementAt(0).ProductionYear})");
+                _logger.LogDebug($"ids are " + printIds(ids)  + " Merging...");
 				_videosController.MergeVersions(ids);
                 _logger.LogDebug("merged");
             }
         }
+
+        private String printIds(Guid[] ids)
+		{
+            String aux = "";
+            foreach(Guid id in ids)
+			{
+                aux += id;
+                aux += " , ";
+			}
+            return aux;
+
+		}
 
         public void MergeEpisodes(IProgress<double> progress)
         {
@@ -183,7 +195,7 @@ namespace Jellyfin.Plugin.MergeVersions
             _logger.LogInformation("Scanning for repeated episodes");
 
             //Group by the Series name, Season name , episode name, episode number and year, then select those with more than 1 in the group
-            var duplications = episodes.GroupBy(x => new {x.SeriesName,x.SeasonName, x.OriginalTitle,x.IndexNumber, x.ProductionYear }).Where(x => x.Count() > 1).ToList();
+            var duplications = episodes.GroupBy(x => new {x.SeriesName,x.SeasonName, x.Name,x.IndexNumber, x.ProductionYear }).Where(x => x.Count() > 1).ToList();
 
            var total = duplications.Count();
             var current = 0;
