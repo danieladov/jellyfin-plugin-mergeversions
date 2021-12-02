@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.MergeVersions.Api;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Configuration;
@@ -51,8 +50,6 @@ namespace Jellyfin.Plugin.MergeVersions
             ISubtitleEncoder subtitleEncoder,
             IDeviceManager deviceManager,
             TranscodingJobHelper transcodingJobHelper
-
-
             )
         {
             
@@ -104,17 +101,17 @@ namespace Jellyfin.Plugin.MergeVersions
         public void MergeMovies(IProgress<double> progress)
         {
             var movies = GetMoviesFromLibrary().ToArray();
-            //var baseItems = new List<BaseItem>();
+            
 
 
             _logger.LogInformation("Scanning for repeated movies");
 
-            //Group by the title and year, then select those with more than 1 in the group
-            var duplications = movies.GroupBy(x => new {x.Name, x.ProductionYear}).Where(x => x.Count() > 1).ToList();
+            //Group by Tmdb Id, then select those with more than 1 in the group
+            var duplications = movies.GroupBy(x => new { V = x.ProviderIds["Tmdb"]}).Where(x => x.Count() > 1).ToList();
             var total = duplications.Count();
             var current = 0;
             //foreach grouping, merge
-            foreach (var m in duplications)
+            Parallel.ForEach(duplications, m => 
             {
                 current++;
                 var percent = ((double) current / (double) total) * 100;
@@ -123,6 +120,8 @@ namespace Jellyfin.Plugin.MergeVersions
                 MergeVideos(m.Where(m => m.PrimaryVersionId == null && m.GetLinkedAlternateVersions().Count() == 0).ToList());//We only want non merged movies
                     
             }
+                );
+            //foreach (var m in duplications)
             progress?.Report(100);
         }
         public void SplitMovies(IProgress<double> progress)
@@ -131,15 +130,16 @@ namespace Jellyfin.Plugin.MergeVersions
             var total = movies.Count();
             var current = 0;
             //foreach grouping, merge
-            foreach (var m in movies)
-            {
-                current++;
-                var percent = ((double)current / (double)total) * 100;
-                progress?.Report((int)percent);
+            Parallel.ForEach(movies, m =>
+             {
+                 current++;
+                 var percent = ((double)current / (double)total) * 100;
+                 progress?.Report((int)percent);
 
-                _logger.LogInformation($"Spliting {m.Name} ({m.ProductionYear})");
-                SplitVideo(m);
-            }
+                 _logger.LogInformation($"Spliting {m.Name} ({m.ProductionYear})");
+                 SplitVideo(m);
+             }
+            );
             progress?.Report(100);
 
         }

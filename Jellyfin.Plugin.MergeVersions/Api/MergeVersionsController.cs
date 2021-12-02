@@ -1,5 +1,4 @@
 using System;
-using MediaBrowser.Api;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Dto;
