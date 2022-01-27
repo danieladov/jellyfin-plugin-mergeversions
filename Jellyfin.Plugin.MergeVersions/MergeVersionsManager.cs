@@ -20,6 +20,7 @@ using MediaBrowser.Controller.MediaEncoding;
 using Microsoft.Extensions.Logging;
 using Jellyfin.Api.Controllers;
 using Jellyfin.Api.Helpers;
+using Jellyfin.Data.Enums;
 
 
 
@@ -59,8 +60,20 @@ namespace Jellyfin.Plugin.MergeVersions
             _userManager = userManager;
             _logger = logger;
             _timer = new Timer(_ => OnTimerElapsed(), null, Timeout.Infinite, Timeout.Infinite);
-            _videosController = new VideosController(_libraryManager, _userManager, dtoService, dlnaManager, authContext,
-                mediaSourceManager, serverConfigurationManager, mediaEncoder, fileSystem, subtitleEncoder, null, deviceManager, transcodingJobHelper, null);
+            _videosController = new VideosController(
+                _libraryManager,
+                _userManager,
+                dtoService,
+                dlnaManager,
+                authContext,
+                mediaSourceManager, 
+                serverConfigurationManager, 
+                mediaEncoder, 
+                deviceManager,
+                transcodingJobHelper,
+                null,
+                null
+                );
 
 
                _fileSystem = fileSystem;       
@@ -72,7 +85,7 @@ namespace Jellyfin.Plugin.MergeVersions
         {
             var movies = _libraryManager.GetItemList(new InternalItemsQuery
             {
-                IncludeItemTypes = new[] {nameof(Movie)},
+                IncludeItemTypes = new[] { BaseItemKind.Movie },
                 IsVirtualItem = false,
                 Recursive = true,
                 HasTmdbId = true,
@@ -88,7 +101,7 @@ namespace Jellyfin.Plugin.MergeVersions
 		{
             var episodes = _libraryManager.GetItemList(new InternalItemsQuery
             {
-                IncludeItemTypes = new[] { nameof(Episode) },
+                IncludeItemTypes = new[] { BaseItemKind.Episode},
                 IsVirtualItem = false,
                 Recursive = true,
 

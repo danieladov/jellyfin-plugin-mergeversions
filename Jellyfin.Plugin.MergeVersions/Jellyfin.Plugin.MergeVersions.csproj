@@ -1,16 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <IsPackable>true</IsPackable>
-    <AssemblyVersion>10.7.7.0</AssemblyVersion>
-    <FileVersion>10.7.7.0</FileVersion>
+    <AssemblyVersion>10.8.0.0</AssemblyVersion>
+    <FileVersion>10.8.0.0</FileVersion>
     <Authors />
     <Company />
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.6.0" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.8.0-alpha5" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="5.0.0" />
     <PackageReference Include="SQLitePCL.pretty.netstandard" Version="2.1.0" />
@@ -23,10 +23,7 @@
 
   <ItemGroup>
     <Reference Include="Jellyfin.Api">
-      <HintPath>..\..\jellyfin\Jellyfin.Api\bin\Debug\net5.0\Jellyfin.Api.dll</HintPath>
-    </Reference>
-    <Reference Include="MediaBrowser.Api">
-      <HintPath>..\..\..\..\..\..\..\..\..\Program Files\Jellyfin\Server\MediaBrowser.Api.dll</HintPath>
+      <HintPath>..\..\jellyfin\Jellyfin.Api\bin\Debug\net6.0\Jellyfin.Api.dll</HintPath>
     </Reference>
   </ItemGroup>
 

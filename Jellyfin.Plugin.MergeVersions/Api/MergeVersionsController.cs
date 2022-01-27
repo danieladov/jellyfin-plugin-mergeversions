@@ -13,12 +13,9 @@ using MediaBrowser.Controller.Devices;
 using Jellyfin.Api.Helpers;
 
 using System.Net.Mime;
-using MediaBrowser.Controller.Collections;
-using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MergeVersions.Api
 { 
