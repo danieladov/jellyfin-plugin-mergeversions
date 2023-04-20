@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.8.0-alpha5" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.8.4" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="5.0.0" />
     <PackageReference Include="SQLitePCL.pretty.netstandard" Version="2.1.0" />
@@ -22,13 +22,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Jellyfin.Api">
-      <HintPath>..\..\jellyfin\Jellyfin.Api\bin\Debug\net6.0\Jellyfin.Api.dll</HintPath>
-    </Reference>
+    <Folder Include="ReferencedAssemblies\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="ReferencedAssemblies\" />
+    <Reference Include="Jellyfin.Api">
+      <HintPath>..\..\jellyfin\Jellyfin.Api\bin\Debug\net6.0\Jellyfin.Api.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

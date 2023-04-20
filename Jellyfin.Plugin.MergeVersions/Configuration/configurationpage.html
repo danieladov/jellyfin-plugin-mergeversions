@@ -28,9 +28,9 @@
                         </div>
                     </div>
 
-                   
-                    <button is="emby-button" type="button" class="raised button-submit block emby-button" id="refresh-library"
-                        onclick=save()><span>Save</span></button>
+
+                    <button is="emby-button" type="button" class="raised button-submit block emby-button"
+                        id="refresh-library" onclick=save()><span>Save</span></button>
 
                     <button is="emby-button" type="button" class="raised block" id="refresh-library"
                         onclick=mergeMovies()><span>Merge All Movies</span></button>
@@ -52,7 +52,7 @@
 
             var pluginId = "f21bbed8-3a97-4d8b-88b2-48aaa65427cb";
 
-            
+
             function mergeMovies() {
                 var request = {
                     url: ApiClient.getUrl('MergeVersions/MergeMovies'),
@@ -114,93 +114,94 @@
             var config = undefined;
 
             ApiClient.getPluginConfiguration(pluginId).then(function (savedConfig) {
-                             config = savedConfig;
+                config = savedConfig;
 
-                             if (!config) {
-                                config.LocationsExcluded =[];
-                             }
+                if (!config) {
+                    config.LocationsExcluded = [];
+                }
 
-                             ApiClient.getVirtualFolders().then(function (virtualFolders) {
-                               loadVirtualFolders(config, virtualFolders);
-                            });
+                ApiClient.getVirtualFolders().then(function (virtualFolders) {
+                    loadVirtualFolders(config, virtualFolders);
+                });
 
 
-                            });
+            });
 
-            
-            
-            
 
-          
-            
 
-            function loadVirtualFolders(config, virtualFolders){
+
+
+
+
+
+            function loadVirtualFolders(config, virtualFolders) {
                 var page = $.mobile.activePage;
                 var html = "";
-                        html += '<div data-role="controlgroup">';
-                        for (var i = 0, length = virtualFolders.length; i < length; i++) {
-                            var virtualFolder = virtualFolders[i];
-                            html += getFolderHtml(config, virtualFolder, i);
-                        }
-                        html += '</div>';
-                        $('#divTraktLocations', page).html(html).trigger('create');
+                html += '<div data-role="controlgroup">';
+                for (var i = 0, length = virtualFolders.length; i < length; i++) {
+                    var virtualFolder = virtualFolders[i];
+                    html += getFolderHtml(config, virtualFolder, i);
+                }
+                html += '</div>';
+                $('#divTraktLocations', page).html(html).trigger('create');
 
             }
 
-             function getFolderHtml (currentUserConfig, virtualFolder, index) {
-                        var html = "";
-                        for (var i = 0, length = virtualFolder.Locations.length; i < length; i++) {
-                            var id = "chkFolder" + index + "_" + i;
-                            var location = virtualFolder.Locations[i];
-                            var isChecked = currentUserConfig.LocationsExcluded.filter(function (current) {
-                                return current.toLowerCase() == location.toLowerCase();
-                            }).length;
-                            var checkedAttribute = isChecked ? 'checked="checked"' : "";
-                            html += '<label><input is="emby-checkbox" class="chkLibrary" type="checkbox" data-mini="true" id="' + id + '" name="' + id + '" data-location="' + location + '" ' + checkedAttribute + ' /><span>' + location + " - " + virtualFolder.Name + '</span></label>';
-                        }
-                        return html;
-                    }
-                
+            function getFolderHtml(currentUserConfig, virtualFolder, index) {
+                var html = "";
+                for (var i = 0, length = virtualFolder.Locations.length; i < length; i++) {
+                    var id = "chkFolder" + index + "_" + i;
+                    var location = virtualFolder.Locations[i];
+                    var isChecked = currentUserConfig.LocationsExcluded.filter(function (current) {
+                        return current.toLowerCase() == location.toLowerCase();
+                    }).length;
+                    var checkedAttribute = isChecked ? 'checked="checked"' : "";
+                    html += '<label><input is="emby-checkbox" class="chkLibrary" type="checkbox" data-mini="true" id="' + id + '" name="' + id + '" data-location="' + location + '" ' + checkedAttribute + ' /><span>' + location + " - " + virtualFolder.Name + '</span></label>';
+                }
+                return html;
+            }
 
-            function save(){             
-                    var folders = $('.chkLibrary:checked').map(function () {
-                        return this.getAttribute('data-location');
-                    }).get();
 
-                    
+            function save() {
+                var folders = $('.chkLibrary:checked').map(function () {
+                    return this.getAttribute('data-location');
+                }).get();
 
-                    ApiClient.getPluginConfiguration(pluginId).then(function (config){
-                        config.LocationsExcluded = folders;
-                        ApiClient.updatePluginConfiguration(pluginId,config).then(function (res){
-                            Dashboard.processPluginConfigurationUpdateResult(res);});
+
+
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.LocationsExcluded = folders;
+                    ApiClient.updatePluginConfiguration(pluginId, config).then(function (res) {
+                        Dashboard.processPluginConfigurationUpdateResult(res);
                     });
-                    
-                              
-                    }
+                });
+
+
+            }
 
             $('.traktConfigurationPage').on('pageinit', function () {
                 var page = this;
-                $('#traktConfigurationForm', page).on('submit', function(){
+                $('#traktConfigurationForm', page).on('submit', function () {
                     save();
                     return false;
                 });
             });
 
-                    
-
-                
-
-                 
-                
 
 
 
-                
 
-            
-           
-                
-            
+
+
+
+
+
+
+
+
+
+
+
         </script>
     </div>
 </body>

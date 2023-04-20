@@ -23,7 +23,7 @@ namespace Jellyfin.Plugin.MergeVersions.Api
     /// The Merge Versions api controller.
     /// </summary>
     [ApiController]
-    [Authorize(Policy = "DefaultAuthorization")]
+    [Authorize]
     [Route("MergeVersions")]
     [Produces(MediaTypeNames.Application.Json)]
     public class MergeVersionsController : ControllerBase

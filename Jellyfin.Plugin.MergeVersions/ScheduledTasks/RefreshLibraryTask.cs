@@ -69,6 +69,11 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             };
         }
 
+        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+        {
+            return Execute(cancellationToken, progress);
+        }
+
         public string Name => "Merge All Movies";
         public string Key => "MergeMoviesTask";
         public string Description => "Scans all libraries to merge repeated movies";
@@ -122,6 +127,11 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             return new[] {
                 new TaskTriggerInfo { Type = TaskTriggerInfo.TriggerInterval, IntervalTicks = TimeSpan.FromHours(24).Ticks}
             };
+        }
+
+        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+        {
+            return Execute(cancellationToken, progress);
         }
 
         public string Name => "Merge All Episodes";

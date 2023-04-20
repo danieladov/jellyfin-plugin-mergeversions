@@ -140,6 +140,7 @@ namespace Jellyfin.Plugin.MergeVersions
         public void SplitMovies(IProgress<double> progress)
 		{
             var movies = GetMoviesFromLibrary().ToArray();
+            movies = movies.Where(isElegible).ToArray();
             var total = movies.Count();
             var current = 0;
             //foreach grouping, merge
