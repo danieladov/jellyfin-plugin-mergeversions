@@ -1,18 +1,16 @@
-
-using MediaBrowser.Controller.Library;
-using Microsoft.Extensions.Logging;
-
 using System.Net.Mime;
+using System.Threading;
+using System.Threading.Tasks;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.IO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-using MediaBrowser.Model.IO;
-using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MergeVersions.Api
-{ 
-     /// <summary>
+{
+    /// <summary>
     /// The Merge Versions api controller.
     /// </summary>
     [ApiController]
@@ -27,17 +25,16 @@ namespace Jellyfin.Plugin.MergeVersions.Api
         /// <summary>
         /// Initializes a new instance of <see cref="TMDbBoxSetsController"/>.
 
-        public MergeVersionsController (ILibraryManager libraryManager, ILogger<MergeVersionsManager> logger,
-            IFileSystem fileSystem)
+        public MergeVersionsController(
+            ILibraryManager libraryManager,
+            ILogger<MergeVersionsManager> logger,
+            IFileSystem fileSystem
+        )
         {
-            _mergeVersionsManager = new MergeVersionsManager(
-             libraryManager,
-             logger,
-            fileSystem);
+            _mergeVersionsManager = new MergeVersionsManager(libraryManager, logger, fileSystem);
 
             _logger = logger;
         }
-
 
         /// <summary>
         /// Scans all movies and merges repeated ones.
@@ -69,7 +66,6 @@ namespace Jellyfin.Plugin.MergeVersions.Api
             return NoContent();
         }
 
-
         /// <summary>
         /// Scans all episodes and merge repeated ones.
         /// </summary>
@@ -84,7 +80,6 @@ namespace Jellyfin.Plugin.MergeVersions.Api
             _logger.LogInformation("Completed refresh");
             return NoContent();
         }
-
 
         /// <summary>
         /// Scans all episodes and splits merged ones.
