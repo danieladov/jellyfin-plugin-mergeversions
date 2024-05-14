@@ -194,7 +194,9 @@ namespace Jellyfin.Plugin.MergeVersions
                     .First();
             }
 
-            var alternateVersionsOfPrimary = primaryVersion.LinkedAlternateVersions.ToList();
+            var alternateVersionsOfPrimary = primaryVersion
+                .LinkedAlternateVersions.Where(l => items.Any(i => i.Path == l.Path))
+                .ToList();
 
             foreach (var item in items.Where(i => !i.Id.Equals(primaryVersion.Id)))
             {
