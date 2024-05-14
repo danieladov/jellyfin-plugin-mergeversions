@@ -1,34 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <IsPackable>true</IsPackable>
-    <AssemblyVersion>10.8.0.0</AssemblyVersion>
-    <FileVersion>10.8.0.0</FileVersion>
+    <AssemblyVersion>10.9.1.0</AssemblyVersion>
+    <FileVersion>10.9.1.0</FileVersion>
     <Authors />
-    <Company />
+    <Company />  		        
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.8.4" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="5.0.0" />
-    <PackageReference Include="SQLitePCL.pretty.netstandard" Version="2.1.0" />
+    <Compile Remove="ReferencedAssemblies\**" />
+    <EmbeddedResource Remove="ReferencedAssemblies\**" />
+    <None Remove="ReferencedAssemblies\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Jellyfin.Common" Version="10.9.1" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.9.1" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="Configuration\configurationpage.html" />
     <EmbeddedResource Include="Configuration\configurationpage.html" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="ReferencedAssemblies\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Jellyfin.Api">
-      <HintPath>..\..\jellyfin\Jellyfin.Api\bin\Debug\net6.0\Jellyfin.Api.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
 </Project>

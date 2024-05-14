@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using Jellyfin.Plugin.MergeVersions.Configuration;
-using MediaBrowser.Common.Configuration;
-using MediaBrowser.Common.Plugins;
+using MediaBrowser.Controller;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+using MediaBrowser.Common.Plugins;
 
 namespace Jellyfin.Plugin.MergeVersions
 {
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages 
     {
-        public Plugin(IApplicationPaths appPaths, IXmlSerializer xmlSerializer)
+        public Plugin(IServerApplicationPaths appPaths, IXmlSerializer xmlSerializer)
             : base(appPaths, xmlSerializer)
         {
             Instance = this;

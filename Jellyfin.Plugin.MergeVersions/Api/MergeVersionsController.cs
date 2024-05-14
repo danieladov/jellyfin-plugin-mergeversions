@@ -1,21 +1,14 @@
-using System;
-using MediaBrowser.Controller.Collections;
-using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Dto;
+
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
-using MediaBrowser.Model.IO;
 using Microsoft.Extensions.Logging;
-using Jellyfin.Api.Controllers;
-using MediaBrowser.Controller.Dlna;
-using MediaBrowser.Controller.MediaEncoding;
-using MediaBrowser.Controller.Devices;
-using Jellyfin.Api.Helpers;
 
 using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using MediaBrowser.Model.IO;
+using System.Threading;
 
 namespace Jellyfin.Plugin.MergeVersions.Api
 { 
@@ -29,39 +22,19 @@ namespace Jellyfin.Plugin.MergeVersions.Api
     public class MergeVersionsController : ControllerBase
     {
         private readonly MergeVersionsManager _mergeVersionsManager;
-        private readonly ILogger<VideosController> _logger;
+        private readonly ILogger<MergeVersionsManager> _logger;
 
         /// <summary>
         /// Initializes a new instance of <see cref="TMDbBoxSetsController"/>.
 
-        public MergeVersionsController (ILibraryManager libraryManager,
-            ICollectionManager collectionManager,
-            ILogger<VideosController> logger,
-            IServerConfigurationManager serverConfigurationManager,
-            IUserManager userManager,
-            IDtoService dtoService,
-            IAuthorizationContext authContext,
-            IFileSystem fileSystem,
-            IDlnaManager dlnaManager,
-            IMediaSourceManager mediaSourceManager,
-            IMediaEncoder mediaEncoder,
-            ISubtitleEncoder subtitleEncoder,
-            IDeviceManager deviceManager,
-            TranscodingJobHelper transcodingJobHelper
-
-            )
+        public MergeVersionsController (ILibraryManager libraryManager, ILogger<MergeVersionsManager> logger,
+            IFileSystem fileSystem)
         {
-            _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
-             userManager,
-             dtoService,
-             authContext,
-             fileSystem,
-             dlnaManager,
-             mediaSourceManager,
-             mediaEncoder,
-             subtitleEncoder,
-             deviceManager,
-             transcodingJobHelper);
+            _mergeVersionsManager = new MergeVersionsManager(
+             libraryManager,
+             logger,
+            fileSystem);
+
             _logger = logger;
         }
 
@@ -104,10 +77,10 @@ namespace Jellyfin.Plugin.MergeVersions.Api
         /// <returns>A <see cref="NoContentResult"/> indicating success.</returns>
         [HttpPost("MergeEpisodes")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public ActionResult MergeEpisodesRequest()
+        public async Task<ActionResult> MergeEpisodesRequestAsync()
         {
             _logger.LogInformation("Starting a manual refresh, looking up for repeated versions");
-            _mergeVersionsManager.MergeEpisodes(null);
+            await _mergeVersionsManager.MergeEpisodesAsync(null);
             _logger.LogInformation("Completed refresh");
             return NoContent();
         }
@@ -120,10 +93,10 @@ namespace Jellyfin.Plugin.MergeVersions.Api
         /// <returns>A <see cref="NoContentResult"/> indicating success.</returns>
         [HttpPost("SplitEpisodes")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public ActionResult SplitEpisodesRequest()
+        public async Task<ActionResult> SplitEpisodesRequestAsync()
         {
             _logger.LogInformation("Spliting all movies");
-            _mergeVersionsManager.SplitEpisodes(null);
+            await _mergeVersionsManager.SplitEpisodesAsync(null);
             _logger.LogInformation("Completed");
             return NoContent();
         }

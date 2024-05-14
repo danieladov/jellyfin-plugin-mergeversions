@@ -4,79 +4,40 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Model.IO;
-using MediaBrowser.Controller.Collections;
-using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
-using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Controller.Session;
-using MediaBrowser.Controller.Dlna;
-using MediaBrowser.Controller.Devices;
-using MediaBrowser.Controller.MediaEncoding;
 using Microsoft.Extensions.Logging;
-using Jellyfin.Api.Controllers;
-using Jellyfin.Api.Helpers;
 using Jellyfin.Data.Enums;
+using MediaBrowser.Model.Entities;
+using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 
 
 
 namespace Jellyfin.Plugin.MergeVersions
 {
-    public class MergeVersionsManager : IServerEntryPoint
+    public class MergeVersionsManager : IDisposable
     {
         private readonly ILibraryManager _libraryManager;
-        private readonly VideosController _videosController;
         private readonly Timer _timer;
-        private readonly ILogger<VideosController> _logger; // TODO logging
-        private readonly IUserManager _userManager;
+        private readonly ILogger<MergeVersionsManager> _logger; // TODO logging
         private readonly SessionInfo _session;
         private readonly IFileSystem _fileSystem;
 
 
-        public MergeVersionsManager(ILibraryManager libraryManager, 
-            ICollectionManager collectionManager, 
-            ILogger<VideosController> logger, 
-            IServerConfigurationManager serverConfigurationManager,
-            IUserManager userManager,
-            IDtoService dtoService,
-            IAuthorizationContext authContext,
-            IFileSystem fileSystem,
-            IDlnaManager dlnaManager,
-            IMediaSourceManager mediaSourceManager,
-            IMediaEncoder mediaEncoder,
-            ISubtitleEncoder subtitleEncoder,
-            IDeviceManager deviceManager,
-            TranscodingJobHelper transcodingJobHelper
-            )
+        public MergeVersionsManager(ILibraryManager libraryManager, ILogger<MergeVersionsManager> logger,
+            IFileSystem fileSystem)
         {
             
-            
-
             _libraryManager = libraryManager;
-            _userManager = userManager;
             _logger = logger;
+            _fileSystem = fileSystem;
             _timer = new Timer(_ => OnTimerElapsed(), null, Timeout.Infinite, Timeout.Infinite);
-            _videosController = new VideosController(
-                _libraryManager,
-                _userManager,
-                dtoService,
-                dlnaManager,
-                authContext,
-                mediaSourceManager, 
-                serverConfigurationManager, 
-                mediaEncoder, 
-                deviceManager,
-                transcodingJobHelper,
-                null,
-                null
-                );
 
-
-               _fileSystem = fileSystem;       
         }
 
 
@@ -124,13 +85,13 @@ namespace Jellyfin.Plugin.MergeVersions
             var total = duplications.Count();
             var current = 0;
             //foreach grouping, merge
-            Parallel.ForEach(duplications, m => 
+            Parallel.ForEach(duplications, async m => 
             {
                 current++;
                 var percent = ((double) current / (double) total) * 100;
                 progress?.Report((int)percent);
 
-                MergeVideos(m.Where(m => m.PrimaryVersionId == null && m.GetLinkedAlternateVersions().Count() == 0).ToList());//We only want non merged movies
+                await MergeVideosAsync(m.Where(m => m.PrimaryVersionId == null && m.GetLinkedAlternateVersions().Count() == 0).ToList());//We only want non merged movies
                     
             }
                 );
@@ -144,27 +105,27 @@ namespace Jellyfin.Plugin.MergeVersions
             var total = movies.Count();
             var current = 0;
             //foreach grouping, merge
-            Parallel.ForEach(movies, m =>
+            Parallel.ForEach(movies, async m =>
              {
                  current++;
                  var percent = ((double)current / (double)total) * 100;
                  progress?.Report((int)percent);
 
                  _logger.LogInformation($"Spliting {m.Name} ({m.ProductionYear})");
-                 SplitVideo(m);
+                 await SplitVideoAsync(m);
              }
             );
             progress?.Report(100);
 
         }
 
-		private void SplitVideo(BaseItem v)
+		private async Task SplitVideoAsync(BaseItem v)
 		{
-            _videosController.DeleteAlternateSources(v.Id);
+            await DeleteAlternateSources(v.Id);
             
         }
 
-		private void MergeVideos(IEnumerable<BaseItem> videos)
+		private async Task MergeVideosAsync(IEnumerable<BaseItem> videos)
         {
             List<BaseItem> elegibleToMerge = new List<BaseItem>();
 
@@ -185,7 +146,14 @@ namespace Jellyfin.Plugin.MergeVersions
             {
                 _logger.LogInformation($"Merging {videos.ElementAt(0).Name} ({videos.ElementAt(0).ProductionYear})");
                 _logger.LogDebug($"ids are " + printIds(ids)  + " Merging...");
-				_videosController.MergeVersions(ids);
+                try
+                {
+				await MergeVersions(ids);
+
+                }catch( Exception e)
+                {
+                    _logger.LogError("Error merging " + e.Message);
+                }
                 _logger.LogDebug("merged");
             }
         }
@@ -202,7 +170,7 @@ namespace Jellyfin.Plugin.MergeVersions
 
 		}
 
-        public void MergeEpisodes(IProgress<double> progress)
+        public async Task MergeEpisodesAsync(IProgress<double> progress)
         {
             var episodes = GetEpisodesFromLibrary().ToArray();
 
@@ -221,12 +189,12 @@ namespace Jellyfin.Plugin.MergeVersions
                 progress?.Report((int)percent);
 
                 _logger.LogInformation($"Merging {e.Key.IndexNumber} ({e.Key.SeriesName})");
-                MergeVideos(e.ToList().Where(e => e.PrimaryVersionId == null && e.GetLinkedAlternateVersions().Count()==0));//We only want non merged movies
+                await MergeVideosAsync(e.ToList().Where(e => e.PrimaryVersionId == null && e.GetLinkedAlternateVersions().Count()==0));//We only want non merged movies
             }
             progress?.Report(100);
         }
 
-        public void SplitEpisodes(IProgress<double> progress)
+        public async Task SplitEpisodesAsync(IProgress<double> progress)
         {
             var episodes = GetEpisodesFromLibrary().ToArray();
             var total = episodes.Count();
@@ -239,16 +207,116 @@ namespace Jellyfin.Plugin.MergeVersions
                 progress?.Report((int)percent);
 
                 _logger.LogInformation($"Spliting {e.IndexNumber} ({e.SeriesName})");
-                SplitVideo(e);
+                await SplitVideoAsync(e);
             }
             progress?.Report(100);
 
         }
 
+        public async Task MergeVersions(Guid[] ids)
+        {
+            var items = ids
+                .Select(i => _libraryManager.GetItemById<BaseItem>(i, null))
+                .OfType<Video>()
+                .OrderBy(i => i.Id)
+                .ToList();
+
+            if (items.Count < 2)
+            {
+                return;
+            }
+
+            var primaryVersion = items.FirstOrDefault(i => i.MediaSourceCount > 1 && string.IsNullOrEmpty(i.PrimaryVersionId));
+            if (primaryVersion is null)
+            {
+                primaryVersion = items
+                    .OrderBy(i =>
+                    {
+                        if (i.Video3DFormat.HasValue || i.VideoType != VideoType.VideoFile)
+                        {
+                            return 1;
+                        }
+
+                        return 0;
+                    })
+                    .ThenByDescending(i => i.GetDefaultVideoStream()?.Width ?? 0)
+                    .First();
+            }
+
+            var alternateVersionsOfPrimary = primaryVersion.LinkedAlternateVersions.ToList();
+
+            foreach (var item in items.Where(i => !i.Id.Equals(primaryVersion.Id)))
+            {
+                item.SetPrimaryVersionId(primaryVersion.Id.ToString("N", CultureInfo.InvariantCulture));
+
+                await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+
+                if (!alternateVersionsOfPrimary.Any(i => string.Equals(i.Path, item.Path, StringComparison.OrdinalIgnoreCase)))
+                {
+                    alternateVersionsOfPrimary.Add(new LinkedChild
+                    {
+                        Path = item.Path,
+                        ItemId = item.Id
+                    });
+                }
+
+                foreach (var linkedItem in item.LinkedAlternateVersions)
+                {
+                    if (!alternateVersionsOfPrimary.Any(i => string.Equals(i.Path, linkedItem.Path, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        alternateVersionsOfPrimary.Add(linkedItem);
+                    }
+                }
+
+                if (item.LinkedAlternateVersions.Length > 0)
+                {
+                    item.LinkedAlternateVersions = Array.Empty<LinkedChild>();
+                    await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+                }
+            }
+
+            primaryVersion.LinkedAlternateVersions = alternateVersionsOfPrimary.ToArray();
+            await primaryVersion.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+            return;
+        }
+
+        public async Task<ActionResult> DeleteAlternateSources([FromRoute, Required] Guid itemId)
+        {
+            var item = _libraryManager.GetItemById<Video>(itemId);
+            if (item is null)
+            {
+                return null;
+            }
+
+            if (item.LinkedAlternateVersions.Length == 0 && item.PrimaryVersionId != null)
+            {
+                item = _libraryManager.GetItemById<Video>(Guid.Parse(item.PrimaryVersionId));
+            }
+
+            if (item is null)
+            {
+                return null;
+            }
+
+            foreach (var link in item.GetLinkedAlternateVersions())
+            {
+                link.SetPrimaryVersionId(null);
+                link.LinkedAlternateVersions = Array.Empty<LinkedChild>();
+
+                await link.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+            }
+
+            item.LinkedAlternateVersions = Array.Empty<LinkedChild>();
+            item.SetPrimaryVersionId(null);
+            await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+
+            return null;
+        }
+
 
         private bool isElegible(BaseItem item)
 		{
-            if (Plugin.Instance.Configuration.LocationsExcluded != null && Plugin.Instance.Configuration.LocationsExcluded.Any(s => _fileSystem.ContainsSubPath(s, item.Path)))
+            if (Plugin.Instance.PluginConfiguration.LocationsExcluded != null && Plugin.Instance.PluginConfiguration.LocationsExcluded.Any(s => _fileSystem.ContainsSubPath(s, item.Path)))
             {
                 return false;
             }
@@ -257,9 +325,6 @@ namespace Jellyfin.Plugin.MergeVersions
 
         private void OnTimerElapsed()
         {
-            // Stop the timer until next update
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
-
         }
 
         public Task RunAsync()
@@ -269,7 +334,17 @@ namespace Jellyfin.Plugin.MergeVersions
 
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _timer?.Dispose();
+                _session?.DisposeAsync();
+            }
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using MediaBrowser.Model.Plugins;
-using MediaBrowser.Model.Entities;
 using System;
 
 namespace Jellyfin.Plugin.MergeVersions.Configuration

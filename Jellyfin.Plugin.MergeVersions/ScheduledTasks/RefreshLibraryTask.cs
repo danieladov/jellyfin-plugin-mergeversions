@@ -2,20 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.MergeVersions.Api;
-using MediaBrowser.Controller.Collections;
-using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 using MediaBrowser.Model.IO;
-using Jellyfin.Api.Controllers;
-using MediaBrowser.Controller.Dlna;
-using MediaBrowser.Controller.MediaEncoding;
-using MediaBrowser.Controller.Devices;
-using Jellyfin.Api.Helpers;
+
 
 namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
 {
@@ -24,34 +15,11 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly ILogger _logger;
         private readonly MergeVersionsManager _mergeVersionsManager;
 
-        public MergeMoviesTask(ILibraryManager libraryManager,
-            ICollectionManager collectionManager,
-            ILogger<VideosController> logger,
-            IServerConfigurationManager serverConfigurationManager,
-            IUserManager userManager,
-            IDtoService dtoService,
-            IAuthorizationContext authContext,
-            IFileSystem fileSystem,
-            IDlnaManager dlnaManager,
-            IMediaSourceManager mediaSourceManager,
-            IMediaEncoder mediaEncoder,
-            ISubtitleEncoder subtitleEncoder,
-            IDeviceManager deviceManager,
-            TranscodingJobHelper transcodingJobHelper
-            )
+        public MergeMoviesTask(ILibraryManager libraryManager, ILogger<MergeVersionsManager> logger,
+            IFileSystem fileSystem)
         {
             _logger = logger;
-            _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,
-             userManager,
-             dtoService,
-             authContext,
-             fileSystem,
-             dlnaManager,
-             mediaSourceManager,
-             mediaEncoder,
-             subtitleEncoder,
-             deviceManager,
-             transcodingJobHelper);
+            _mergeVersionsManager = new MergeVersionsManager(libraryManager,logger,fileSystem);
         }
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
@@ -86,39 +54,19 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly ILogger _logger;
         private readonly MergeVersionsManager _mergeVersionsManager;
 
-        public MergeEpisodesTask(ILibraryManager libraryManager,
-            ICollectionManager collectionManager,
-            ILogger<VideosController> logger,
-            IServerConfigurationManager serverConfigurationManager,
-            IUserManager userManager,
-            IDtoService dtoService,
-            IAuthorizationContext authContext,
-            IFileSystem fileSystem,
-            IDlnaManager dlnaManager,
-            IMediaSourceManager mediaSourceManager,
-            IMediaEncoder mediaEncoder,
-            ISubtitleEncoder subtitleEncoder,
-            IDeviceManager deviceManager,
-            TranscodingJobHelper transcodingJobHelper)
+        public MergeEpisodesTask(ILibraryManager libraryManager, ILogger<MergeVersionsManager> logger,
+            IFileSystem fileSystem)
         {
             _logger = logger;
-            _mergeVersionsManager = new MergeVersionsManager(libraryManager, collectionManager, logger, serverConfigurationManager,             userManager,
-             dtoService,
-             authContext,
-             fileSystem,
-             dlnaManager,
-             mediaSourceManager,
-             mediaEncoder,
-             subtitleEncoder,
-             deviceManager,
-             transcodingJobHelper);
+            _mergeVersionsManager = new MergeVersionsManager(
+                libraryManager, logger,fileSystem);
         }
-        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             _logger.LogInformation("Starting plugin, Merging Episodes");
-            _mergeVersionsManager.MergeEpisodes(progress);
+            await _mergeVersionsManager.MergeEpisodesAsync(progress);
             _logger.LogInformation("Merging Episodes task finished");
-            return Task.CompletedTask;
+            return;
         }
 
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
