@@ -1,22 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using MediaBrowser.Model.IO;
+using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
-using Microsoft.Extensions.Logging;
-using Jellyfin.Data.Enums;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.IO;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using System.Globalization;
-
-
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MergeVersions
 {
@@ -28,195 +26,146 @@ namespace Jellyfin.Plugin.MergeVersions
         private readonly SessionInfo _session;
         private readonly IFileSystem _fileSystem;
 
-
-        public MergeVersionsManager(ILibraryManager libraryManager, ILogger<MergeVersionsManager> logger,
-            IFileSystem fileSystem)
+        public MergeVersionsManager(
+            ILibraryManager libraryManager,
+            ILogger<MergeVersionsManager> logger,
+            IFileSystem fileSystem
+        )
         {
-            
             _libraryManager = libraryManager;
             _logger = logger;
             _fileSystem = fileSystem;
             _timer = new Timer(_ => OnTimerElapsed(), null, Timeout.Infinite, Timeout.Infinite);
-
         }
-
-
-
-        private IEnumerable<Movie> GetMoviesFromLibrary()
-        {
-            var movies = _libraryManager.GetItemList(new InternalItemsQuery
-            {
-                IncludeItemTypes = new[] { BaseItemKind.Movie },
-                IsVirtualItem = false,
-                Recursive = true,
-                HasTmdbId = true,
-                
-                
-
-            }).Select(m => m as Movie);
-
-            return movies.ToList();
-        }
-
-        private IEnumerable<Episode> GetEpisodesFromLibrary()
-		{
-            var episodes = _libraryManager.GetItemList(new InternalItemsQuery
-            {
-                IncludeItemTypes = new[] { BaseItemKind.Episode},
-                IsVirtualItem = false,
-                Recursive = true,
-
-            }).Select(m => m as Episode);
-
-            return episodes.ToList();
-        
-    }
 
         public void MergeMovies(IProgress<double> progress)
         {
-            var movies = GetMoviesFromLibrary().ToArray();
-            
-
-
             _logger.LogInformation("Scanning for repeated movies");
 
-            //Group by Tmdb Id, then select those with more than 1 in the group
-            var duplications = movies.GroupBy(x => new { V = x.ProviderIds["Tmdb"]}).Where(x => x.Count() > 1).ToList();
-            var total = duplications.Count();
-            var current = 0;
-            //foreach grouping, merge
-            Parallel.ForEach(duplications, async m => 
-            {
-                current++;
-                var percent = ((double) current / (double) total) * 100;
-                progress?.Report((int)percent);
+            var duplicateMovies = GetMoviesFromLibrary()
+                .GroupBy(x => x.ProviderIds["Tmdb"])
+                .Where(x => x.Count() > 1)
+                .ToList();
 
-                await MergeVideosAsync(m.Where(m => m.PrimaryVersionId == null && m.GetLinkedAlternateVersions().Count() == 0).ToList());//We only want non merged movies
-                    
-            }
-                );
-            //foreach (var m in duplications)
-            progress?.Report(100);
-        }
-        public void SplitMovies(IProgress<double> progress)
-		{
-            var movies = GetMoviesFromLibrary().ToArray();
-            movies = movies.Where(isElegible).ToArray();
-            var total = movies.Count();
             var current = 0;
-            //foreach grouping, merge
-            Parallel.ForEach(movies, async m =>
-             {
-                 current++;
-                 var percent = ((double)current / (double)total) * 100;
-                 progress?.Report((int)percent);
-
-                 _logger.LogInformation($"Spliting {m.Name} ({m.ProductionYear})");
-                 await SplitVideoAsync(m);
-             }
+            Parallel.ForEach(
+                duplicateMovies,
+                async m =>
+                {
+                    current++;
+                    var percent = current / (double)duplicateMovies.Count * 100;
+                    progress?.Report((int)percent);
+                    _logger.LogInformation(
+                        $"Merging {m.ElementAt(0).Name} ({m.ElementAt(0).ProductionYear})"
+                    );
+                    await MergeVersions(m.Select(e => e.Id).ToList());
+                }
             );
             progress?.Report(100);
-
         }
 
-		private async Task SplitVideoAsync(BaseItem v)
-		{
-            await DeleteAlternateSources(v.Id);
-            
-        }
-
-		private async Task MergeVideosAsync(IEnumerable<BaseItem> videos)
+        public void SplitMovies(IProgress<double> progress)
         {
-            List<BaseItem> elegibleToMerge = new List<BaseItem>();
-
-            foreach (var video in videos)
-			{
-				if (isElegible(video))
-				{
-                    elegibleToMerge.Add(video);
-				}
-			}
-
-            Guid[] ids = new Guid[elegibleToMerge.Count];
-            for (int i = 0; i < elegibleToMerge.Count; i++)
-			{
-                ids[i] = elegibleToMerge.ElementAt(i).Id;
-			}
-                if (elegibleToMerge.Count() > 1)
-            {
-                _logger.LogInformation($"Merging {videos.ElementAt(0).Name} ({videos.ElementAt(0).ProductionYear})");
-                _logger.LogDebug($"ids are " + printIds(ids)  + " Merging...");
-                try
+            var movies = GetMoviesFromLibrary();
+            var current = 0;
+            Parallel.ForEach(
+                movies,
+                async m =>
                 {
-				await MergeVersions(ids);
+                    current++;
+                    var percent = current / (double)movies.Count * 100;
+                    progress?.Report((int)percent);
 
-                }catch( Exception e)
-                {
-                    _logger.LogError("Error merging " + e.Message);
+                    _logger.LogInformation($"Spliting {m.Name} ({m.ProductionYear})");
+                    await DeleteAlternateSources(m.Id);
                 }
-                _logger.LogDebug("merged");
-            }
+            );
+            progress?.Report(100);
         }
-
-        private String printIds(Guid[] ids)
-		{
-            String aux = "";
-            foreach(Guid id in ids)
-			{
-                aux += id;
-                aux += " , ";
-			}
-            return aux;
-
-		}
 
         public async Task MergeEpisodesAsync(IProgress<double> progress)
         {
-            var episodes = GetEpisodesFromLibrary().ToArray();
-
             _logger.LogInformation("Scanning for repeated episodes");
 
-            //Group by the Series name, Season name , episode name, episode number and year, then select those with more than 1 in the group
-            var duplications = episodes.GroupBy(x => new {x.SeriesName,x.SeasonName, x.Name,x.IndexNumber, x.ProductionYear }).Where(x => x.Count() > 1).ToList();
+            var duplicateEpisodes = GetEpisodesFromLibrary()
+                .GroupBy(x => new
+                {
+                    x.SeriesName,
+                    x.SeasonName,
+                    x.Name,
+                    x.IndexNumber,
+                    x.ProductionYear
+                })
+                .Where(x => x.Count() > 1)
+                .ToList();
 
-           var total = duplications.Count();
             var current = 0;
-            //foreach grouping, merge
-            foreach (var e in duplications)
+            foreach (var e in duplicateEpisodes)
             {
                 current++;
-                var percent = ((double)current / (double)total) * 100;
+                var percent = current / (double)duplicateEpisodes.Count * 100;
                 progress?.Report((int)percent);
-
-                _logger.LogInformation($"Merging {e.Key.IndexNumber} ({e.Key.SeriesName})");
-                await MergeVideosAsync(e.ToList().Where(e => e.PrimaryVersionId == null && e.GetLinkedAlternateVersions().Count()==0));//We only want non merged movies
+                _logger.LogInformation(
+                    $"Merging {e.ElementAt(0).Name} ({e.ElementAt(0).ProductionYear})"
+                );
+                await MergeVersions(e.Select(e => e.Id).ToList());
             }
             progress?.Report(100);
         }
 
         public async Task SplitEpisodesAsync(IProgress<double> progress)
         {
-            var episodes = GetEpisodesFromLibrary().ToArray();
-            var total = episodes.Count();
+            var episodes = GetEpisodesFromLibrary();
             var current = 0;
-            //foreach grouping, merge
+
             foreach (var e in episodes)
             {
                 current++;
-                var percent = ((double)current / (double)total) * 100;
+                var percent = current / (double)episodes.Count * 100;
                 progress?.Report((int)percent);
 
                 _logger.LogInformation($"Spliting {e.IndexNumber} ({e.SeriesName})");
-                await SplitVideoAsync(e);
+                await DeleteAlternateSources(e.Id);
             }
             progress?.Report(100);
-
         }
 
-        public async Task MergeVersions(Guid[] ids)
+        private List<Movie> GetMoviesFromLibrary()
         {
-            var items = ids
-                .Select(i => _libraryManager.GetItemById<BaseItem>(i, null))
+            return _libraryManager
+                .GetItemList(
+                    new InternalItemsQuery
+                    {
+                        IncludeItemTypes = [BaseItemKind.Movie],
+                        IsVirtualItem = false,
+                        Recursive = true,
+                        HasTmdbId = true,
+                    }
+                )
+                .Select(m => m as Movie)
+                .Where(IsElegible)
+                .ToList();
+        }
+
+        private List<Episode> GetEpisodesFromLibrary()
+        {
+            return _libraryManager
+                .GetItemList(
+                    new InternalItemsQuery
+                    {
+                        IncludeItemTypes = [BaseItemKind.Episode],
+                        IsVirtualItem = false,
+                        Recursive = true,
+                    }
+                )
+                .Select(m => m as Episode)
+                .Where(IsElegible)
+                .ToList();
+        }
+
+        private async Task MergeVersions(List<Guid> ids)
+        {
+            var items = ids.Select(i => _libraryManager.GetItemById<BaseItem>(i, null))
                 .OfType<Video>()
                 .OrderBy(i => i.Id)
                 .ToList();
@@ -226,7 +175,9 @@ namespace Jellyfin.Plugin.MergeVersions
                 return;
             }
 
-            var primaryVersion = items.FirstOrDefault(i => i.MediaSourceCount > 1 && string.IsNullOrEmpty(i.PrimaryVersionId));
+            var primaryVersion = items.FirstOrDefault(i =>
+                i.MediaSourceCount > 1 && string.IsNullOrEmpty(i.PrimaryVersionId)
+            );
             if (primaryVersion is null)
             {
                 primaryVersion = items
@@ -243,26 +194,44 @@ namespace Jellyfin.Plugin.MergeVersions
                     .First();
             }
 
-            var alternateVersionsOfPrimary = primaryVersion.LinkedAlternateVersions.ToList();
+            var alternateVersionsOfPrimary = primaryVersion
+                .LinkedAlternateVersions.Where(l => items.Any(i => i.Path == l.Path))
+                .ToList();
 
             foreach (var item in items.Where(i => !i.Id.Equals(primaryVersion.Id)))
             {
-                item.SetPrimaryVersionId(primaryVersion.Id.ToString("N", CultureInfo.InvariantCulture));
+                item.SetPrimaryVersionId(
+                    primaryVersion.Id.ToString("N", CultureInfo.InvariantCulture)
+                );
 
-                await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+                await item.UpdateToRepositoryAsync(
+                        ItemUpdateType.MetadataEdit,
+                        CancellationToken.None
+                    )
+                    .ConfigureAwait(false);
 
-                if (!alternateVersionsOfPrimary.Any(i => string.Equals(i.Path, item.Path, StringComparison.OrdinalIgnoreCase)))
+                if (
+                    !alternateVersionsOfPrimary.Any(i =>
+                        string.Equals(i.Path, item.Path, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
                 {
-                    alternateVersionsOfPrimary.Add(new LinkedChild
-                    {
-                        Path = item.Path,
-                        ItemId = item.Id
-                    });
+                    alternateVersionsOfPrimary.Add(
+                        new LinkedChild { Path = item.Path, ItemId = item.Id }
+                    );
                 }
 
                 foreach (var linkedItem in item.LinkedAlternateVersions)
                 {
-                    if (!alternateVersionsOfPrimary.Any(i => string.Equals(i.Path, linkedItem.Path, StringComparison.OrdinalIgnoreCase)))
+                    if (
+                        !alternateVersionsOfPrimary.Any(i =>
+                            string.Equals(
+                                i.Path,
+                                linkedItem.Path,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        )
+                    )
                     {
                         alternateVersionsOfPrimary.Add(linkedItem);
                     }
@@ -270,22 +239,27 @@ namespace Jellyfin.Plugin.MergeVersions
 
                 if (item.LinkedAlternateVersions.Length > 0)
                 {
-                    item.LinkedAlternateVersions = Array.Empty<LinkedChild>();
-                    await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+                    item.LinkedAlternateVersions = [];
+                    await item.UpdateToRepositoryAsync(
+                            ItemUpdateType.MetadataEdit,
+                            CancellationToken.None
+                        )
+                        .ConfigureAwait(false);
                 }
             }
 
             primaryVersion.LinkedAlternateVersions = alternateVersionsOfPrimary.ToArray();
-            await primaryVersion.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-            return;
+            await primaryVersion
+                .UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None)
+                .ConfigureAwait(false);
         }
 
-        public async Task<ActionResult> DeleteAlternateSources([FromRoute, Required] Guid itemId)
+        private async Task DeleteAlternateSources(Guid itemId)
         {
             var item = _libraryManager.GetItemById<Video>(itemId);
             if (item is null)
             {
-                return null;
+                return;
             }
 
             if (item.LinkedAlternateVersions.Length == 0 && item.PrimaryVersionId != null)
@@ -295,42 +269,42 @@ namespace Jellyfin.Plugin.MergeVersions
 
             if (item is null)
             {
-                return null;
+                return;
             }
 
             foreach (var link in item.GetLinkedAlternateVersions())
             {
                 link.SetPrimaryVersionId(null);
-                link.LinkedAlternateVersions = Array.Empty<LinkedChild>();
+                link.LinkedAlternateVersions = [];
 
-                await link.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
+                await link.UpdateToRepositoryAsync(
+                        ItemUpdateType.MetadataEdit,
+                        CancellationToken.None
+                    )
+                    .ConfigureAwait(false);
             }
 
-            item.LinkedAlternateVersions = Array.Empty<LinkedChild>();
+            item.LinkedAlternateVersions = [];
             item.SetPrimaryVersionId(null);
-            await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-
-            return null;
+            await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None)
+                .ConfigureAwait(false);
         }
 
-
-        private bool isElegible(BaseItem item)
-		{
-            if (Plugin.Instance.PluginConfiguration.LocationsExcluded != null && Plugin.Instance.PluginConfiguration.LocationsExcluded.Any(s => _fileSystem.ContainsSubPath(s, item.Path)))
+        private bool IsElegible(BaseItem item)
+        {
+            if (
+                Plugin.Instance.PluginConfiguration.LocationsExcluded != null
+                && Plugin.Instance.PluginConfiguration.LocationsExcluded.Any(s =>
+                    _fileSystem.ContainsSubPath(s, item.Path)
+                )
+            )
             {
                 return false;
             }
             return true;
         }
 
-        private void OnTimerElapsed()
-        {
-        }
-
-        public Task RunAsync()
-        {
-            return Task.CompletedTask;
-        }
+        private void OnTimerElapsed() { }
 
         public void Dispose()
         {

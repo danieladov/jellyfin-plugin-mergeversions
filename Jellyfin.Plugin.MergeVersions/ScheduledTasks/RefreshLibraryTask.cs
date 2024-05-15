@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
-using MediaBrowser.Model.IO;
-
 
 namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
 {
@@ -15,12 +14,16 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly ILogger _logger;
         private readonly MergeVersionsManager _mergeVersionsManager;
 
-        public MergeMoviesTask(ILibraryManager libraryManager, ILogger<MergeVersionsManager> logger,
-            IFileSystem fileSystem)
+        public MergeMoviesTask(
+            ILibraryManager libraryManager,
+            ILogger<MergeVersionsManager> logger,
+            IFileSystem fileSystem
+        )
         {
             _logger = logger;
-            _mergeVersionsManager = new MergeVersionsManager(libraryManager,logger,fileSystem);
+            _mergeVersionsManager = new MergeVersionsManager(libraryManager, logger, fileSystem);
         }
+
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             _logger.LogInformation("Starting plugin, Merging Movies");
@@ -32,8 +35,13 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
         {
             // Run this task every 24 hours
-            return new[] {
-                new TaskTriggerInfo { Type = TaskTriggerInfo.TriggerInterval, IntervalTicks = TimeSpan.FromHours(24).Ticks}
+            return new[]
+            {
+                new TaskTriggerInfo
+                {
+                    Type = TaskTriggerInfo.TriggerInterval,
+                    IntervalTicks = TimeSpan.FromHours(24).Ticks
+                }
             };
         }
 
@@ -48,19 +56,21 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         public string Category => "Merge Versions";
     }
 
-
     public class MergeEpisodesTask : IScheduledTask
     {
         private readonly ILogger _logger;
         private readonly MergeVersionsManager _mergeVersionsManager;
 
-        public MergeEpisodesTask(ILibraryManager libraryManager, ILogger<MergeVersionsManager> logger,
-            IFileSystem fileSystem)
+        public MergeEpisodesTask(
+            ILibraryManager libraryManager,
+            ILogger<MergeVersionsManager> logger,
+            IFileSystem fileSystem
+        )
         {
             _logger = logger;
-            _mergeVersionsManager = new MergeVersionsManager(
-                libraryManager, logger,fileSystem);
+            _mergeVersionsManager = new MergeVersionsManager(libraryManager, logger, fileSystem);
         }
+
         public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             _logger.LogInformation("Starting plugin, Merging Episodes");
@@ -72,8 +82,13 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
         {
             // Run this task every 24 hours
-            return new[] {
-                new TaskTriggerInfo { Type = TaskTriggerInfo.TriggerInterval, IntervalTicks = TimeSpan.FromHours(24).Ticks}
+            return new[]
+            {
+                new TaskTriggerInfo
+                {
+                    Type = TaskTriggerInfo.TriggerInterval,
+                    IntervalTicks = TimeSpan.FromHours(24).Ticks
+                }
             };
         }
 
