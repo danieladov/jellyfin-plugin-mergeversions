@@ -198,7 +198,10 @@ namespace Jellyfin.Plugin.MergeVersions
                 .LinkedAlternateVersions.Where(l => items.Any(i => i.Path == l.Path))
                 .ToList();
 
-            foreach (var item in items.Where(i => !i.Id.Equals(primaryVersion.Id)))
+            var alternateVersionsChanged = false;
+            foreach (var item in items.Where(i =>
+                !i.Id.Equals(primaryVersion.Id) &&
+                !alternateVersionsOfPrimary.Any(l => l.ItemId == i.Id)))
             {
                 item.SetPrimaryVersionId(
                     primaryVersion.Id.ToString("N", CultureInfo.InvariantCulture)
@@ -210,31 +213,15 @@ namespace Jellyfin.Plugin.MergeVersions
                     )
                     .ConfigureAwait(false);
 
-                if (
-                    !alternateVersionsOfPrimary.Any(i =>
-                        string.Equals(i.Path, item.Path, StringComparison.OrdinalIgnoreCase)
-                    )
-                )
-                {
-                    alternateVersionsOfPrimary.Add(
-                        new LinkedChild { Path = item.Path, ItemId = item.Id }
-                    );
-                }
+                // TODO: due to check in foreach it can't be an alternate version yet?
+                AddToAlternateVersionsIfNotPresent(alternateVersionsOfPrimary,
+                                                new LinkedChild { Path = item.Path,
+                                                                  ItemId = item.Id });
 
                 foreach (var linkedItem in item.LinkedAlternateVersions)
                 {
-                    if (
-                        !alternateVersionsOfPrimary.Any(i =>
-                            string.Equals(
-                                i.Path,
-                                linkedItem.Path,
-                                StringComparison.OrdinalIgnoreCase
-                            )
-                        )
-                    )
-                    {
-                        alternateVersionsOfPrimary.Add(linkedItem);
-                    }
+                    AddToAlternateVersionsIfNotPresent(alternateVersionsOfPrimary,
+                                                    linkedItem);
                 }
 
                 if (item.LinkedAlternateVersions.Length > 0)
@@ -246,12 +233,16 @@ namespace Jellyfin.Plugin.MergeVersions
                         )
                         .ConfigureAwait(false);
                 }
+                alternateVersionsChanged = true;
             }
 
-            primaryVersion.LinkedAlternateVersions = alternateVersionsOfPrimary.ToArray();
-            await primaryVersion
-                .UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None)
-                .ConfigureAwait(false);
+            if (alternateVersionsChanged)
+            {
+                primaryVersion.LinkedAlternateVersions = alternateVersionsOfPrimary.ToArray();
+                await primaryVersion
+                    .UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
         }
 
         private async Task DeleteAlternateSources(Guid itemId)
@@ -302,6 +293,19 @@ namespace Jellyfin.Plugin.MergeVersions
                 return false;
             }
             return true;
+        }
+
+        private void AddToAlternateVersionsIfNotPresent(List<LinkedChild> alternateVersions,
+                                                        LinkedChild newVersion)
+        {
+            if (!alternateVersions.Any(
+                i => string.Equals(i.Path,
+                                newVersion.Path,
+                                StringComparison.OrdinalIgnoreCase
+                            )))
+            {
+                alternateVersions.Add(newVersion);
+            }
         }
 
         private void OnTimerElapsed() { }
