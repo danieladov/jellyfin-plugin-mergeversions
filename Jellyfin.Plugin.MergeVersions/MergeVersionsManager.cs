@@ -44,7 +44,9 @@ namespace Jellyfin.Plugin.MergeVersions
 
             var duplicateMovies = GetMoviesFromLibrary()
                 .GroupBy(x => x.ProviderIds["Tmdb"])
-                .Where(x => x.Count() > 1)
+                .Where(group => group.Count() > 1 &&
+                group.Any(movie => movie.PrimaryVersionId == null &&
+                                    !movie.LinkedAlternateVersions.Any()))
                 .ToList();
 
             var current = 0;
