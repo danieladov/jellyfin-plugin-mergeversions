@@ -135,17 +135,17 @@ namespace Jellyfin.Plugin.MergeVersions
         private List<Movie> GetMoviesFromLibrary()
         {
             return _libraryManager
-                .GetItemList(
-                    new InternalItemsQuery
-                    {
-                        IncludeItemTypes = [BaseItemKind.Movie],
-                        IsVirtualItem = false,
-                        Recursive = true,
-                        HasTmdbId = true,
-                    }
+                    .GetItemList(
+                        new InternalItemsQuery
+                        {
+                            IncludeItemTypes = [BaseItemKind.Movie],
+                            IsVirtualItem = false,
+                            Recursive = true,
+                            HasTmdbId = true,
+                        }
                 )
                 .Select(m => m as Movie)
-                .Where(IsElegible)
+                .Where(IsEligible)
                 .ToList();
         }
 
@@ -161,7 +161,7 @@ namespace Jellyfin.Plugin.MergeVersions
                     }
                 )
                 .Select(m => m as Episode)
-                .Where(IsElegible)
+                .Where(IsEligible)
                 .ToList();
         }
 
@@ -283,18 +283,29 @@ namespace Jellyfin.Plugin.MergeVersions
                 .ConfigureAwait(false);
         }
 
-        private bool IsElegible(BaseItem item)
+        private bool IsEligible(BaseItem item)
         {
-            if (
-                Plugin.Instance.PluginConfiguration.LocationsExcluded != null
-                && Plugin.Instance.PluginConfiguration.LocationsExcluded.Any(s =>
-                    _fileSystem.ContainsSubPath(s, item.Path)
-                )
-            )
+            if (IsInInactiveLibrary(item) || IsInExcludedLibrary(item))
             {
                 return false;
             }
             return true;
+        }
+
+        private bool IsInExcludedLibrary(BaseItem item)
+        {
+           return Plugin.Instance.PluginConfiguration.LocationsExcluded != null
+                  && Plugin.Instance.PluginConfiguration.LocationsExcluded
+                    .Any(s => _fileSystem.ContainsSubPath(s, item.Path));
+        }
+
+        private bool IsInInactiveLibrary(BaseItem item)
+        {
+            if (item is not Movie)
+                return false;
+            var virtualFolders = _libraryManager.GetVirtualFolders();
+            
+            return !virtualFolders.Any(vf => vf.Locations.Contains(item.DisplayParent.Path));
         }
 
         private void AddToAlternateVersionsIfNotPresent(List<LinkedChild> alternateVersions,
