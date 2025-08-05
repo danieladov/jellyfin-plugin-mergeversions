@@ -303,9 +303,12 @@ namespace Jellyfin.Plugin.MergeVersions
         {
             if (item is not Movie)
                 return false;
+
             var virtualFolders = _libraryManager.GetVirtualFolders();
-            
-            return !virtualFolders.Any(vf => vf.Locations.Contains(item.DisplayParent.Path));
+
+            return !virtualFolders
+                .SelectMany(vf => vf.Locations)
+                .Any(libPath => libPath == item.DisplayParent.Path || _fileSystem.ContainsSubPath(libPath, item.DisplayParent.Path));
         }
 
         private void AddToAlternateVersionsIfNotPresent(List<LinkedChild> alternateVersions,
