@@ -15,20 +15,22 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly MergeVersionsManager _mergeVersionsManager;
 
         public MergeMoviesTask(
-            ILibraryManager libraryManager,
             ILogger<MergeVersionsManager> logger,
+            ILibraryManager libraryManager,
             IFileSystem fileSystem
         )
         {
             _logger = logger;
             _mergeVersionsManager = new MergeVersionsManager(libraryManager, logger, fileSystem);
+            _logger.LogInformation("{PluginName} | Scheduled Task initialized.", nameof(_mergeVersionsManager));
         }
 
-        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        public Task Execute(
+            CancellationToken cancellationToken,
+            IProgress<double> progress
+        )
         {
-            _logger.LogInformation("Starting plugin, Merging Movies");
             _mergeVersionsManager.MergeMovies(progress);
-            _logger.LogInformation("All movies merged");
             return Task.CompletedTask;
         }
 
@@ -45,7 +47,10 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
             };
         }
 
-        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+        public Task ExecuteAsync(
+            IProgress<double> progress,
+            CancellationToken cancellationToken
+        )
         {
             return Execute(cancellationToken, progress);
         }
@@ -62,12 +67,11 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly MergeVersionsManager _mergeVersionsManager;
 
         public MergeEpisodesTask(
-            ILibraryManager libraryManager,
             ILogger<MergeVersionsManager> logger,
+            ILibraryManager libraryManager,
             IFileSystem fileSystem
         )
         {
-            _logger = logger;
             _mergeVersionsManager = new MergeVersionsManager(libraryManager, logger, fileSystem);
         }
 

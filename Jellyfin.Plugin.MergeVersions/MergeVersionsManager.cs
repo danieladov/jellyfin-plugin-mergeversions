@@ -20,9 +20,9 @@ namespace Jellyfin.Plugin.MergeVersions
 {
     public class MergeVersionsManager : IDisposable
     {
+        private readonly ILogger<MergeVersionsManager> _logger;
         private readonly ILibraryManager _libraryManager;
         private readonly Timer _timer;
-        private readonly ILogger<MergeVersionsManager> _logger; // TODO logging
         private readonly SessionInfo _session;
         private readonly IFileSystem _fileSystem;
 
@@ -32,15 +32,16 @@ namespace Jellyfin.Plugin.MergeVersions
             IFileSystem fileSystem
         )
         {
-            _libraryManager = libraryManager;
             _logger = logger;
+            _libraryManager = libraryManager;
             _fileSystem = fileSystem;
             _timer = new Timer(_ => OnTimerElapsed(), null, Timeout.Infinite, Timeout.Infinite);
+            _logger.LogInformation("{PluginName} |  initialized.", nameof(MergeVersionsManager));
         }
 
         public void MergeMovies(IProgress<double> progress)
         {
-            _logger.LogInformation("Scanning for repeated movies");
+            _logger.LogInformation("{PluginName} | Scanning for repeated movies", nameof(MergeVersionsManager));
 
             var duplicateMovies = GetMoviesFromLibrary()
                 .GroupBy(x => x.ProviderIds["Tmdb"])
@@ -87,7 +88,7 @@ namespace Jellyfin.Plugin.MergeVersions
 
         public async Task MergeEpisodesAsync(IProgress<double> progress)
         {
-            _logger.LogInformation("Scanning for repeated episodes");
+            _logger.LogInformation("{PluginName} | Scanning for repeated episodes", nameof(MergeVersionsManager));
 
             var duplicateEpisodes = GetEpisodesFromLibrary()
                 .GroupBy(x => new
