@@ -182,18 +182,31 @@ namespace Jellyfin.Plugin.MergeVersions
             );
             if (primaryVersion is null)
             {
-                primaryVersion = items
-                    .OrderBy(i =>
+                var preferredLocation = Plugin.Instance.PluginConfiguration.PreferredLocation;
+                if (!string.IsNullOrEmpty(preferredLocation))
+                {
+                    var preferredVersion = items.FirstOrDefault(i =>
+                        !string.IsNullOrEmpty(i.Path) && i.Path.StartsWith(preferredLocation, StringComparison.OrdinalIgnoreCase)
+                    );
+                    if (preferredVersion is not null)
                     {
-                        if (i.Video3DFormat.HasValue || i.VideoType != VideoType.VideoFile)
+                        primaryVersion = preferredVersion;
+                    }
+                }
+                if (primaryVersion is null)
+                {
+                    primaryVersion = items
+                        .OrderBy(i =>
                         {
-                            return 1;
-                        }
-
-                        return 0;
-                    })
-                    .ThenByDescending(i => i.GetDefaultVideoStream()?.Width ?? 0)
-                    .First();
+                            if (i.Video3DFormat.HasValue || i.VideoType != VideoType.VideoFile)
+                            {
+                                return 1;
+                            }
+                            return 0;
+                        })
+                        .ThenByDescending(i => i.GetDefaultVideoStream()?.Width ?? 0)
+                        .First();
+                }
             }
 
             var alternateVersionsOfPrimary = primaryVersion

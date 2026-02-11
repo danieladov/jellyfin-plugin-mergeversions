@@ -27,6 +27,17 @@
                         <div id="divTraktLocations" class="paperList checkboxList checkboxList-paperList">
                         </div>
                     </div>
+                    
+                    <br />
+                    <div>
+                        <h3 class="checkboxListLabel">Preferred location prefix for merging (optional):</h3>
+                        <div id="divPreferredLocation" class="paperList">
+                            <label>
+                                <input type="text" id="preferredLocationInput" name="preferredLocation" style="width: 100%;" placeholder="e.g. /my/storage02/" />
+                            </label>
+                            <span style="font-size: 0.9em; color: #888;">If set, any path starting with this prefix will be preferred as main version.</span>
+                        </div>
+                    </div>
 
 
                     <button is="emby-button" type="button" class="raised button-submit block emby-button"
@@ -114,17 +125,15 @@
             var config = undefined;
 
             ApiClient.getPluginConfiguration(pluginId).then(function (savedConfig) {
-                config = savedConfig;
-
-                if (!config) {
-                    config.LocationsExcluded = [];
-                }
+                // Ensure we always have a non-null config object
+                config = savedConfig || { LocationsExcluded: [], PreferredLocation: "" };
 
                 ApiClient.getVirtualFolders().then(function (virtualFolders) {
+                    // Defensive: ensure virtualFolders is at least an empty array
+                    virtualFolders = virtualFolders || [];
                     loadVirtualFolders(config, virtualFolders);
+                    loadPreferredLocation(config);
                 });
-
-
             });
 
 
@@ -145,6 +154,25 @@
                 html += '</div>';
                 $('#divTraktLocations', page).html(html).trigger('create');
 
+            }
+            
+            function loadPreferredLocation(config) {
+                // Set the value of the input field to the saved prefix
+                var input = document.getElementById('preferredLocationInput');
+                if (input) {
+                    input.value = config.PreferredLocation || "";
+                }
+            }
+            
+            function escapeHtml(text) {
+                var map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, function(m) { return map[m]; });
             }
 
             function getFolderHtml(currentUserConfig, virtualFolder, index) {
@@ -167,16 +195,15 @@
                     return this.getAttribute('data-location');
                 }).get();
 
-
+                var preferredLocation = document.getElementById('preferredLocationInput').value || "";
 
                 ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                     config.LocationsExcluded = folders;
+                    config.PreferredLocation = preferredLocation;
                     ApiClient.updatePluginConfiguration(pluginId, config).then(function (res) {
                         Dashboard.processPluginConfigurationUpdateResult(res);
                     });
                 });
-
-
             }
 
             $('.traktConfigurationPage').on('pageinit', function () {
