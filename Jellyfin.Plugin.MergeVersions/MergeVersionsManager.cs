@@ -78,7 +78,7 @@ namespace Jellyfin.Plugin.MergeVersions
                     var percent = current / (double)movies.Count * 100;
                     progress?.Report((int)percent);
 
-                    _logger.LogInformation($"Spliting {m.Name} ({m.ProductionYear})");
+                    _logger.LogInformation($"Splitting {m.Name} ({m.ProductionYear})");
                     await DeleteAlternateSources(m.Id);
                 }
             );
@@ -126,7 +126,7 @@ namespace Jellyfin.Plugin.MergeVersions
                 var percent = current / (double)episodes.Count * 100;
                 progress?.Report((int)percent);
 
-                _logger.LogInformation($"Spliting {e.IndexNumber} ({e.SeriesName})");
+                _logger.LogInformation($"Splitting episode {e.IndexNumber} of {e.SeriesName}");
                 await DeleteAlternateSources(e.Id);
             }
             progress?.Report(100);
