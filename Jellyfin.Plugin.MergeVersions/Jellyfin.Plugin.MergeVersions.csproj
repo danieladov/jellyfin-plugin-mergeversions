@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>true</IsPackable>
-    <AssemblyVersion>12.0.0</AssemblyVersion>
-    <FileVersion>12.0.0</FileVersion>
+    <AssemblyVersion>12.0.1</AssemblyVersion>
+    <FileVersion>12.0.1</FileVersion>
     <Authors />
     <Company />  		        
   </PropertyGroup>
@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Common" Version="12.0.0-rcrc3" />
-    <PackageReference Include="Jellyfin.Controller" Version="12.0.0-rcrc3" />
+    <PackageReference Include="Jellyfin.Common" Version="12.1.0" />
+    <PackageReference Include="Jellyfin.Controller" Version="12.1.0" />
   </ItemGroup>
 
   <ItemGroup>

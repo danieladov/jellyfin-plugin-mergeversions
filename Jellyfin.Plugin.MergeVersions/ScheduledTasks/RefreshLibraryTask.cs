@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -15,21 +13,19 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly MergeVersionsManager _mergeVersionsManager;
 
         public MergeMoviesTask(
-            ILibraryManager libraryManager,
-            ILogger<MergeVersionsManager> logger,
-            IFileSystem fileSystem
+            MergeVersionsManager mergeVersionsManager,
+            ILogger<MergeVersionsManager> logger
         )
         {
             _logger = logger;
-            _mergeVersionsManager = new MergeVersionsManager(libraryManager, logger, fileSystem);
+            _mergeVersionsManager = mergeVersionsManager;
         }
 
-        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             _logger.LogInformation("Starting plugin, Merging Movies");
-            _mergeVersionsManager.MergeMovies(progress);
+            await _mergeVersionsManager.MergeMoviesAsync(progress, cancellationToken: cancellationToken);
             _logger.LogInformation("All movies merged");
-            return Task.CompletedTask;
         }
 
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
@@ -62,19 +58,18 @@ namespace Jellyfin.Plugin.MergeVersions.ScheduledTasks
         private readonly MergeVersionsManager _mergeVersionsManager;
 
         public MergeEpisodesTask(
-            ILibraryManager libraryManager,
-            ILogger<MergeVersionsManager> logger,
-            IFileSystem fileSystem
+            MergeVersionsManager mergeVersionsManager,
+            ILogger<MergeVersionsManager> logger
         )
         {
             _logger = logger;
-            _mergeVersionsManager = new MergeVersionsManager(libraryManager, logger, fileSystem);
+            _mergeVersionsManager = mergeVersionsManager;
         }
 
         public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             _logger.LogInformation("Starting plugin, Merging Episodes");
-            await _mergeVersionsManager.MergeEpisodesAsync(progress);
+            await _mergeVersionsManager.MergeEpisodesAsync(progress, cancellationToken: cancellationToken);
             _logger.LogInformation("Merging Episodes task finished");
             return;
         }

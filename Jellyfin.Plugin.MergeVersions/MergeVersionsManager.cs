@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
@@ -9,9 +9,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.MergeVersions
@@ -22,21 +20,25 @@ namespace Jellyfin.Plugin.MergeVersions
         private readonly Timer _timer;
         private readonly ILogger<MergeVersionsManager> _logger; // TODO logging
         private readonly IFileSystem _fileSystem;
+        private readonly IVideoVersions _videoVersions;
 
         public MergeVersionsManager(
             ILibraryManager libraryManager,
             ILogger<MergeVersionsManager> logger,
-            IFileSystem fileSystem
+            IFileSystem fileSystem,
+            IVideoVersions videoVersions
         )
         {
             _libraryManager = libraryManager;
             _logger = logger;
             _fileSystem = fileSystem;
+            _videoVersions = videoVersions;
             _timer = new Timer(_ => OnTimerElapsed(), null, Timeout.Infinite, Timeout.Infinite);
         }
 
-        public void MergeMovies(IProgress<double> progress)
+        public async Task MergeMoviesAsync(IProgress<double> progress, ClaimsPrincipal user = null, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("Scanning for repeated movies");
 
             var duplicateMovies = GetMoviesFromLibrary()
@@ -47,43 +49,39 @@ namespace Jellyfin.Plugin.MergeVersions
                 .ToList();
 
             var current = 0;
-            Parallel.ForEach(
-                duplicateMovies,
-                async m =>
-                {
-                    current++;
-                    var percent = current / (double)duplicateMovies.Count * 100;
-                    progress?.Report((int)percent);
-                    _logger.LogInformation(
-                        $"Merging {m.ElementAt(0).Name} ({m.ElementAt(0).ProductionYear})"
-                    );
-                    await MergeVersions(m.Select(e => e.Id).ToList());
-                }
-            );
+            foreach (var movies in duplicateMovies)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var first = movies.First();
+                _logger.LogInformation("Merging {Name} ({Year})", first.Name, first.ProductionYear);
+                await _videoVersions.MergeAsync(movies.Select(e => e.Id).ToArray(), user, cancellationToken).ConfigureAwait(false);
+                progress?.Report(++current / (double)duplicateMovies.Count * 100);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100);
         }
 
-        public void SplitMovies(IProgress<double> progress)
+        public async Task SplitMoviesAsync(IProgress<double> progress, ClaimsPrincipal user = null, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var movies = GetMoviesFromLibrary();
             var current = 0;
-            Parallel.ForEach(
-                movies,
-                async m =>
-                {
-                    current++;
-                    var percent = current / (double)movies.Count * 100;
-                    progress?.Report((int)percent);
+            foreach (var movie in movies)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _logger.LogInformation("Splitting {Name} ({Year})", movie.Name, movie.ProductionYear);
+                await _videoVersions.SplitAsync(movie.Id, user, cancellationToken).ConfigureAwait(false);
+                progress?.Report(++current / (double)movies.Count * 100);
+            }
 
-                    _logger.LogInformation($"Spliting {m.Name} ({m.ProductionYear})");
-                    await DeleteAlternateSources(m.Id);
-                }
-            );
+            cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100);
         }
 
-        public async Task MergeEpisodesAsync(IProgress<double> progress)
+        public async Task MergeEpisodesAsync(IProgress<double> progress, ClaimsPrincipal user = null, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("Scanning for repeated episodes");
 
             var episodes = GetEpisodesFromLibrary();
@@ -98,33 +96,34 @@ namespace Jellyfin.Plugin.MergeVersions
                 duplicateEpisodes.Count);
 
             var current = 0;
-            foreach (var e in duplicateEpisodes)
+            foreach (var episodeGroup in duplicateEpisodes)
             {
-                current++;
-                var percent = current / (double)duplicateEpisodes.Count * 100;
-                progress?.Report((int)percent);
-                _logger.LogInformation(
-                    $"Merging {e.ElementAt(0).Name} ({e.ElementAt(0).ProductionYear})"
-                );
-                await MergeVersions(e.Select(e => e.Id).ToList());
+                cancellationToken.ThrowIfCancellationRequested();
+                var first = episodeGroup.First();
+                _logger.LogInformation("Merging {Name} ({Year})", first.Name, first.ProductionYear);
+                await _videoVersions.MergeAsync(episodeGroup.Select(e => e.Id).ToArray(), user, cancellationToken).ConfigureAwait(false);
+                progress?.Report(++current / (double)duplicateEpisodes.Count * 100);
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100);
         }
 
-        public async Task SplitEpisodesAsync(IProgress<double> progress)
+        public async Task SplitEpisodesAsync(IProgress<double> progress, ClaimsPrincipal user = null, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var episodes = GetEpisodesFromLibrary();
             var current = 0;
 
-            foreach (var e in episodes)
+            foreach (var episode in episodes)
             {
-                current++;
-                var percent = current / (double)episodes.Count * 100;
-                progress?.Report((int)percent);
-
-                _logger.LogInformation($"Splitting {e.IndexNumber} ({e.SeriesName})");
-                await DeleteAlternateSources(e.Id);
+                cancellationToken.ThrowIfCancellationRequested();
+                _logger.LogInformation("Splitting {EpisodeNumber} ({SeriesName})", episode.IndexNumber, episode.SeriesName);
+                await _videoVersions.SplitAsync(episode.Id, user, cancellationToken).ConfigureAwait(false);
+                progress?.Report(++current / (double)episodes.Count * 100);
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100);
         }
 
@@ -178,172 +177,6 @@ namespace Jellyfin.Plugin.MergeVersions
             }
 
             return $"title:{episode.SeriesName}:{episode.SeasonName}:{episode.Name}:{episode.ProductionYear}";
-        }
-
-        private async Task MergeVersions(List<Guid> ids)
-        {
-            var items = ids
-                .Select(i => _libraryManager.GetItemById<BaseItem>(i, null))
-                .OfType<Video>()
-                .OrderBy(i => i.Id)
-                .ToList();
-
-            if (items.Count < 2)
-            {
-                return;
-            }
-
-            var primaryVersion = items.FirstOrDefault(i => i.MediaSourceCount > 1 && !i.PrimaryVersionId.HasValue);
-            if (primaryVersion is null)
-            {
-                primaryVersion = items
-                    .OrderBy(i => i.Video3DFormat.HasValue || i.VideoType != VideoType.VideoFile ? 1 : 0)
-                    .ThenByDescending(i => i.GetDefaultVideoStream()?.Width ?? 0)
-                    .First();
-            }
-            
-            var versions = GetAllAlternateVersions(items);
-            var alternateVersions = versions.Where(i => !i.Id.Equals(primaryVersion.Id)).ToList();
-
-
-            foreach (var item in alternateVersions)
-            {
-                item.SetPrimaryVersionId(primaryVersion.Id);
-                item.OwnerId = primaryVersion.Id;
-                PreserveAlternateVersionLinks(item);
-
-                await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-                await _libraryManager.RerouteLinkedChildReferencesAsync(item.Id, primaryVersion.Id).ConfigureAwait(false);
-            }
-
-            foreach (var item in alternateVersions)
-            {
-                item.LocalAlternateVersions = Array.Empty<string>();
-                item.LinkedAlternateVersions = Array.Empty<LinkedChild>();
-                await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-            }
-
-            primaryVersion.LocalAlternateVersions = alternateVersions
-                .Select(i => i.Path)
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-            primaryVersion.LinkedAlternateVersions = Array.Empty<LinkedChild>();
-            primaryVersion.SetPrimaryVersionId(null);
-            primaryVersion.OwnerId = Guid.Empty;
-
-            await primaryVersion.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-            
-            foreach (var alternate in alternateVersions)
-            {
-                _libraryManager.UpsertLinkedChild(
-                    primaryVersion.Id,
-                    alternate.Id,
-                    LinkedChildType.LocalAlternateVersion);
-            }
-
-            _logger.LogInformation(
-                "Merged {Count} local alternate versions into {Name} ({Id})",
-                alternateVersions.Count,
-                primaryVersion.Name,
-                primaryVersion.Id);
-        }
-
-        private async Task DeleteAlternateSources(Guid itemId)
-        {
-            var item = _libraryManager.GetItemById<Video>(itemId);
-            if (item is null)
-            {
-                return;
-            }
-
-            if (item.PrimaryVersionId.HasValue)
-            {
-                item = _libraryManager.GetItemById<Video>(item.PrimaryVersionId.Value);
-            }
-
-            if (item is null)
-            {
-                return;
-            }
-
-            var alternateVersions = GetAllAlternateVersions([item])
-                .Where(i => !i.Id.Equals(item.Id))
-                .ToList();
-
-            _logger.LogInformation(
-                "Splitting {Count} alternate versions from {Name} ({Id})",
-                alternateVersions.Count,
-                item.Name,
-                item.Id);
-            
-            foreach (var alternate in alternateVersions)
-            {
-                alternate.SetPrimaryVersionId(null);
-                alternate.OwnerId = Guid.Empty;
-                PreserveAlternateVersionLinks(alternate);
-
-                await alternate.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-            }
-
-            foreach (var alternate in alternateVersions)
-            {
-                alternate.LocalAlternateVersions = Array.Empty<string>();
-                alternate.LinkedAlternateVersions = Array.Empty<LinkedChild>();
-                await alternate.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-            }
-
-            item.LocalAlternateVersions = Array.Empty<string>();
-            item.LinkedAlternateVersions = Array.Empty<LinkedChild>();
-            item.SetPrimaryVersionId(null);
-            item.OwnerId = Guid.Empty;
-            await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, CancellationToken.None).ConfigureAwait(false);
-        }
-
-        private List<Video> GetAllAlternateVersions(IEnumerable<Video> initialVersions)
-        {
-            var versions = new Dictionary<Guid, Video>();
-            var pending = new Queue<Video>(initialVersions);
-
-            while (pending.Count > 0)
-            {
-                var version = pending.Dequeue();
-                if (!versions.TryAdd(version.Id, version))
-                {
-                    continue;
-                }
-
-                foreach (var alternateId in _libraryManager.GetLocalAlternateVersionIds(version))
-                {
-                    if (_libraryManager.GetItemById<Video>(alternateId) is Video alternate)
-                    {
-                        pending.Enqueue(alternate);
-                    }
-                }
-
-                foreach (var alternate in _libraryManager.GetLinkedAlternateVersions(version))
-                {
-                    pending.Enqueue(alternate);
-                }
-            }
-
-            return versions.Values.ToList();
-        }
-
-        private void PreserveAlternateVersionLinks(Video version)
-        {
-            version.LocalAlternateVersions = _libraryManager.GetLocalAlternateVersionIds(version)
-                .Select(id => _libraryManager.GetItemById<Video>(id)?.Path)
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Cast<string>()
-                .ToArray();
-            version.LinkedAlternateVersions = _libraryManager.GetLinkedAlternateVersions(version)
-                .Select(alternate => new LinkedChild
-                {
-                    ItemId = alternate.Id,
-                    Type = LinkedChildType.LinkedAlternateVersion
-                })
-                .ToArray();
         }
 
         private bool IsEligible(BaseItem item)
