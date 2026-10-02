@@ -117,6 +117,43 @@ public class MergeVersionsManagerTests
     }
 
     [Fact]
+    public async Task EpisodesWithDifferentNumbersDoNotMergeEvenWithSameProviderId()
+    {
+        var versions = new Mock<IVideoVersions>(MockBehavior.Strict);
+        var paths = new Mock<IServerApplicationPaths>();
+        paths.SetupGet(p => p.PluginsPath).Returns(AppContext.BaseDirectory);
+        _ = new TestPlugin(paths.Object);
+
+        var ep1_hd = new Episode { Id = Guid.NewGuid(), SeriesName = "Chumbak", ParentIndexNumber = 1, IndexNumber = 1 };
+        ep1_hd.ProviderIds["Tvdb"] = "473585";
+        var ep1_4k = new Episode { Id = Guid.NewGuid(), SeriesName = "Chumbak", ParentIndexNumber = 1, IndexNumber = 1 };
+        ep1_4k.ProviderIds["Tvdb"] = "473585";
+
+        var ep2_hd = new Episode { Id = Guid.NewGuid(), SeriesName = "Chumbak", ParentIndexNumber = 1, IndexNumber = 2 };
+        ep2_hd.ProviderIds["Tvdb"] = "473585";
+        var ep2_4k = new Episode { Id = Guid.NewGuid(), SeriesName = "Chumbak", ParentIndexNumber = 1, IndexNumber = 2 };
+        ep2_4k.ProviderIds["Tvdb"] = "473585";
+
+        var items = new List<BaseItem> { ep1_hd, ep1_4k, ep2_hd, ep2_4k };
+        var library = new Mock<ILibraryManager>(MockBehavior.Strict);
+        library.Setup(l => l.GetItemList(It.IsAny<InternalItemsQuery>())).Returns(items);
+
+        var mergedGroups = new List<Guid[]>();
+        versions.Setup(v => v.MergeAsync(It.IsAny<Guid[]>(), null, It.IsAny<CancellationToken>()))
+            .Callback<Guid[], ClaimsPrincipal, CancellationToken>((ids, u, ct) => mergedGroups.Add(ids))
+            .Returns(Task.CompletedTask);
+
+        var manager = new MergeVersionsManager(library.Object, NullLogger<MergeVersionsManager>.Instance,
+            Mock.Of<IFileSystem>(), versions.Object);
+
+        await manager.MergeEpisodesAsync(null);
+
+        Assert.Equal(2, mergedGroups.Count);
+        Assert.Contains(mergedGroups, g => g.Contains(ep1_hd.Id) && g.Contains(ep1_4k.Id) && g.Length == 2);
+        Assert.Contains(mergedGroups, g => g.Contains(ep2_hd.Id) && g.Contains(ep2_4k.Id) && g.Length == 2);
+    }
+
+    [Fact]
     public void ManualEntryPointsRequireElevation()
     {
         var authorization = Assert.Single(typeof(MergeVersionsController)

@@ -162,18 +162,18 @@ namespace Jellyfin.Plugin.MergeVersions
 
         private static string GetEpisodeMergeKey(Episode episode)
         {
+            if (episode.ParentIndexNumber.HasValue && episode.IndexNumber.HasValue)
+            {
+                return $"number:{episode.SeriesName}:{episode.ParentIndexNumber}:{episode.IndexNumber}:{episode.IndexNumberEnd}";
+            }
+
             foreach (var provider in new[] { "Tvdb", "Tmdb", "Imdb" })
             {
                 if (episode.ProviderIds.TryGetValue(provider, out var providerId)
                     && !string.IsNullOrWhiteSpace(providerId))
                 {
-                    return $"provider:{provider}:{providerId}";
+                    return $"provider:{episode.SeriesName}:{provider}:{providerId}";
                 }
-            }
-            
-            if (episode.ParentIndexNumber.HasValue && episode.IndexNumber.HasValue)
-            {
-                return $"number:{episode.SeriesName}:{episode.ParentIndexNumber}:{episode.IndexNumber}:{episode.IndexNumberEnd}";
             }
 
             return $"title:{episode.SeriesName}:{episode.SeasonName}:{episode.Name}:{episode.ProductionYear}";
