@@ -87,7 +87,9 @@ namespace Jellyfin.Plugin.MergeVersions
             var episodes = GetEpisodesFromLibrary();
             var duplicateEpisodes = episodes
                 .GroupBy(GetEpisodeMergeKey, StringComparer.OrdinalIgnoreCase)
-                .Where(x => x.Count() > 1)
+                .Where(group => group.Count() > 1 &&
+                                group.Any(episode => episode.PrimaryVersionId == null &&
+                                                     !episode.LinkedAlternateVersions.Any()))
                 .ToList();
 
             _logger.LogInformation(

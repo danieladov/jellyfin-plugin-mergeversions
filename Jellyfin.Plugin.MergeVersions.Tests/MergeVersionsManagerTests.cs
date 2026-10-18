@@ -154,6 +154,44 @@ public class MergeVersionsManagerTests
     }
 
     [Fact]
+    public async Task AlreadyMergedEpisodesAreNotReMerged()
+    {
+        var versions = new Mock<IVideoVersions>(MockBehavior.Strict);
+        var paths = new Mock<IServerApplicationPaths>();
+        paths.SetupGet(p => p.PluginsPath).Returns(AppContext.BaseDirectory);
+        _ = new TestPlugin(paths.Object);
+
+        var primary = new Episode
+        {
+            Id = Guid.NewGuid(),
+            SeriesName = "Chumbak",
+            ParentIndexNumber = 1,
+            IndexNumber = 1,
+            LinkedAlternateVersions = new[] { new LinkedChild { Path = "/path/to/alt" } }
+        };
+        var secondary = new Episode
+        {
+            Id = Guid.NewGuid(),
+            SeriesName = "Chumbak",
+            ParentIndexNumber = 1,
+            IndexNumber = 1,
+            PrimaryVersionId = primary.Id
+        };
+
+        var items = new List<BaseItem> { primary, secondary };
+        var library = new Mock<ILibraryManager>(MockBehavior.Strict);
+        library.Setup(l => l.GetItemList(It.IsAny<InternalItemsQuery>())).Returns(items);
+
+        var manager = new MergeVersionsManager(library.Object, NullLogger<MergeVersionsManager>.Instance,
+            Mock.Of<IFileSystem>(), versions.Object);
+
+        await manager.MergeEpisodesAsync(null);
+
+        // MergeAsync should never be called because all episodes in the group are already merged
+        versions.Verify(v => v.MergeAsync(It.IsAny<Guid[]>(), It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public void ManualEntryPointsRequireElevation()
     {
         var authorization = Assert.Single(typeof(MergeVersionsController)
