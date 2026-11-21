@@ -31,6 +31,8 @@ This does not migrate or repair local-version groups created by earlier plugin r
 
 Cancellation stops the scan between groups, after the current native operation finishes.
 
+Before merging, versions whose default version was deleted are unlinked so they can be merged again.
+
 
 
 ## Build Process

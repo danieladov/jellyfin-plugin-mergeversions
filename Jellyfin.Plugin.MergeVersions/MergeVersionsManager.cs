@@ -41,7 +41,9 @@ namespace Jellyfin.Plugin.MergeVersions
             cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation("Scanning for repeated movies");
 
-            var duplicateMovies = GetMoviesFromLibrary()
+            var allMovies = GetMoviesFromLibrary();
+            await UnlinkDeletedDefaultsAsync(allMovies, cancellationToken).ConfigureAwait(false);
+            var duplicateMovies = allMovies
                 .GroupBy(x => x.ProviderIds["Tmdb"])
                 .Where(group => group.Count() > 1 &&
                 group.Any(movie => movie.PrimaryVersionId == null &&
@@ -85,6 +87,7 @@ namespace Jellyfin.Plugin.MergeVersions
             _logger.LogInformation("Scanning for repeated episodes");
 
             var episodes = GetEpisodesFromLibrary();
+            await UnlinkDeletedDefaultsAsync(episodes, cancellationToken).ConfigureAwait(false);
             var duplicateEpisodes = episodes
                 .GroupBy(GetEpisodeMergeKey, StringComparer.OrdinalIgnoreCase)
                 .Where(group => group.Count() > 1 &&
@@ -127,6 +130,22 @@ namespace Jellyfin.Plugin.MergeVersions
 
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100);
+        }
+
+        // A deleted default version leaves its other versions pointing at it. They look merged, so
+        // they were never grouped again. Jellyfin's split can't undo this: the default is gone.
+        private async Task UnlinkDeletedDefaultsAsync(IEnumerable<Video> videos, CancellationToken cancellationToken)
+        {
+            var orphans = videos
+                .Where(v => v.PrimaryVersionId.HasValue && _libraryManager.GetItemById(v.PrimaryVersionId.Value) is null)
+                .ToList();
+            foreach (var video in orphans)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                _logger.LogInformation("Unlinking {Path} from its deleted default version", video.Path);
+                video.SetPrimaryVersionId(null);
+                await video.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         private List<Movie> GetMoviesFromLibrary()
