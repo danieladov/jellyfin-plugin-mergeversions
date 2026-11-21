@@ -181,6 +181,7 @@ public class MergeVersionsManagerTests
         var items = new List<BaseItem> { primary, secondary };
         var library = new Mock<ILibraryManager>(MockBehavior.Strict);
         library.Setup(l => l.GetItemList(It.IsAny<InternalItemsQuery>())).Returns(items);
+        library.Setup(l => l.GetItemById(primary.Id)).Returns(primary);
 
         var manager = new MergeVersionsManager(library.Object, NullLogger<MergeVersionsManager>.Instance,
             Mock.Of<IFileSystem>(), versions.Object);
@@ -189,6 +190,30 @@ public class MergeVersionsManagerTests
 
         // MergeAsync should never be called because all episodes in the group are already merged
         versions.Verify(v => v.MergeAsync(It.IsAny<Guid[]>(), It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CopiesOfADeletedDefaultAreUnlinkedAndMergedAgain()
+    {
+        var paths = new Mock<IServerApplicationPaths>();
+        paths.SetupGet(p => p.PluginsPath).Returns(AppContext.BaseDirectory);
+        _ = new TestPlugin(paths.Object);
+        var deleted = Guid.NewGuid();
+        var copies = Enumerable.Range(0, 2).Select(_ => new Movie { Id = Guid.NewGuid(), PrimaryVersionId = deleted }).ToList();
+        copies.ForEach(c => c.ProviderIds["Tmdb"] = "1");
+        var library = new Mock<ILibraryManager>(); // GetItemById(deleted) returns null
+        library.Setup(l => l.GetItemList(It.IsAny<InternalItemsQuery>())).Returns(copies.Cast<BaseItem>().ToList());
+        BaseItem.LibraryManager = library.Object; // Jellyfin's save goes through it
+        var versions = new Mock<IVideoVersions>(MockBehavior.Strict);
+        versions.Setup(v => v.MergeAsync(It.IsAny<Guid[]>(), null, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        using var manager = new MergeVersionsManager(library.Object, NullLogger<MergeVersionsManager>.Instance,
+            Mock.Of<IFileSystem>(), versions.Object);
+
+        await manager.MergeMoviesAsync(null);
+
+        Assert.All(copies, c => Assert.Null(c.PrimaryVersionId));
+        library.Verify(l => l.UpdateItemAsync(It.IsAny<BaseItem>(), It.IsAny<BaseItem>(), ItemUpdateType.MetadataEdit, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        versions.Verify(v => v.MergeAsync(It.Is<Guid[]>(ids => ids.Length == 2), null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
