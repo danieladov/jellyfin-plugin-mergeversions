@@ -29,6 +29,13 @@
                     </div>
 
 
+                    <div class="inputContainer">
+                        <h3>Preferred default version</h3>
+                        <textarea is="emby-textarea" id="txtPreferredLocations" rows="3"></textarea>
+                        <div class="fieldDescription">Folders, one per line, highest priority first. A merged item plays its
+                            version from the first of them by default. Applied when merging.</div>
+                    </div>
+
                     <button is="emby-button" type="button" class="raised button-submit block emby-button"
                         id="refresh-library" onclick=save()><span>Save</span></button>
 
@@ -120,6 +127,7 @@
                     config.LocationsExcluded = [];
                 }
 
+                document.querySelector('#txtPreferredLocations').value = (config.PreferredLocations || []).join('\n');
                 ApiClient.getVirtualFolders().then(function (virtualFolders) {
                     loadVirtualFolders(config, virtualFolders);
                 });
@@ -171,6 +179,8 @@
 
                 ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                     config.LocationsExcluded = folders;
+                    config.PreferredLocations = document.querySelector('#txtPreferredLocations').value
+                        .split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
                     ApiClient.updatePluginConfiguration(pluginId, config).then(function (res) {
                         Dashboard.processPluginConfigurationUpdateResult(res);
                     });

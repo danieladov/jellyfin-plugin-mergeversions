@@ -191,6 +191,52 @@ public class MergeVersionsManagerTests
         versions.Verify(v => v.MergeAsync(It.IsAny<Guid[]>(), It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(true, "/hd")]
+    [InlineData(false)]
+    [InlineData(false, "/other")]
+    [InlineData(false, "/uhd", "/hd")]
+    [InlineData(false, "/hd", "excluded")]
+    public async Task MergeMakesThePreferredVersionTheDefault(bool switches, params string[] preferred)
+    {
+        var paths = new Mock<IServerApplicationPaths>();
+        paths.SetupGet(p => p.PluginsPath).Returns(AppContext.BaseDirectory);
+        _ = new TestPlugin(paths.Object);
+        Plugin.Instance.PluginConfiguration.PreferredLocations = preferred.Where(p => p != "excluded").ToArray();
+        if (preferred.Contains("excluded"))
+        {
+            Plugin.Instance.PluginConfiguration.LocationsExcluded = new[] { "/uhd" };
+        }
+
+        var hd = new Movie { Id = Guid.NewGuid(), Path = "/hd/a.mkv", Width = 1920 };
+        var uhd = new Movie { Id = Guid.NewGuid(), Path = "/uhd/a.mkv", Width = 3840,
+            LinkedAlternateVersions = new[] { new LinkedChild { ItemId = hd.Id } } };
+        hd.PrimaryVersionId = uhd.Id;
+        var library = new Mock<ILibraryManager>();
+        library.Setup(l => l.GetItemList(It.IsAny<InternalItemsQuery>())).Returns(new List<BaseItem> { uhd, hd });
+        library.Setup(l => l.GetItemById(uhd.Id)).Returns(uhd);
+        library.Setup(l => l.GetLinkedAlternateVersions(uhd)).Returns(new[] { hd });
+        BaseItem.LibraryManager = library.Object;
+        uhd.ProviderIds["Tmdb"] = hd.ProviderIds["Tmdb"] = "1";
+        var fileSystem = new Mock<IFileSystem>();
+        fileSystem.Setup(f => f.ContainsSubPath(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>((parent, path) => path.StartsWith(parent + "/", StringComparison.Ordinal));
+        var calls = new List<string>();
+        var versions = new Mock<IVideoVersions>(MockBehavior.Strict);
+        versions.Setup(v => v.SplitAsync(uhd.Id, null, It.IsAny<CancellationToken>())).Callback(() => calls.Add("split")).Returns(Task.CompletedTask);
+        versions.Setup(v => v.MergeAsync(It.IsAny<Guid[]>(), null, It.IsAny<CancellationToken>()))
+            .Callback<Guid[], ClaimsPrincipal, CancellationToken>((ids, _, _) => calls.Add("merge " + ids.Length)).Returns(Task.CompletedTask);
+        using var manager = new MergeVersionsManager(library.Object, NullLogger<MergeVersionsManager>.Instance, fileSystem.Object, versions.Object);
+
+        await manager.MergeMoviesAsync(null);
+
+        Assert.Equal(switches ? new[] { "split", "merge 2" } : Array.Empty<string>(), calls);
+        if (switches)
+        {
+            Assert.Equal(uhd.Id, Assert.Single(hd.LinkedAlternateVersions).ItemId);
+        }
+    }
+
     [Fact]
     public void ManualEntryPointsRequireElevation()
     {
