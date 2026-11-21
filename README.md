@@ -31,6 +31,12 @@ This does not migrate or repair local-version groups created by earlier plugin r
 
 Cancellation stops the scan between groups, after the current native operation finishes.
 
+Jellyfin makes the widest version the default of a merged item. To prefer others, list folders under
+**Preferred default version**, highest priority first: the merge then makes the version from the first
+of them the default, for items merged before too. The plugin does this by splitting the item and
+merging it again with the preferred version already holding the others as alternates. A merged item
+shows its default version's watched state.
+
 
 
 ## Build Process

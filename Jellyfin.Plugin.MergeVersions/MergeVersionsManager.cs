@@ -58,6 +58,8 @@ namespace Jellyfin.Plugin.MergeVersions
                 progress?.Report(++current / (double)duplicateMovies.Count * 100);
             }
 
+            await ApplyPreferredDefaultsAsync(GetMoviesFromLibrary(), user, cancellationToken).ConfigureAwait(false);
+
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100);
         }
@@ -107,6 +109,8 @@ namespace Jellyfin.Plugin.MergeVersions
                 progress?.Report(++current / (double)duplicateEpisodes.Count * 100);
             }
 
+            await ApplyPreferredDefaultsAsync(episodes, user, cancellationToken).ConfigureAwait(false);
+
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100);
         }
@@ -127,6 +131,54 @@ namespace Jellyfin.Plugin.MergeVersions
 
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report(100);
+        }
+
+        // Jellyfin makes the widest version the default. To prefer another, split the group, give the
+        // preferred version the others as alternates, and merge again: Jellyfin's merge keeps a
+        // version that already has alternates as the default.
+        private async Task ApplyPreferredDefaultsAsync(IEnumerable<Video> videos, ClaimsPrincipal user, CancellationToken cancellationToken)
+        {
+            var preferred = Plugin.Instance.PluginConfiguration.PreferredLocations ?? Array.Empty<string>();
+            if (preferred.Length == 0)
+            {
+                return;
+            }
+
+            int Rank(Video video)
+            {
+                var index = Array.FindIndex(preferred, location => _fileSystem.ContainsSubPath(location, video.Path));
+                return index < 0 ? int.MaxValue : index;
+            }
+
+            var defaultIds = videos.Where(v => v.PrimaryVersionId.HasValue).Select(v => v.PrimaryVersionId.Value).Distinct().ToList();
+            foreach (var id in defaultIds)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_libraryManager.GetItemById(id) is not Video current)
+                {
+                    continue;
+                }
+
+                var group = _libraryManager.GetLinkedAlternateVersions(current).Prepend(current).ToList();
+                var best = group.OrderBy(Rank).ThenByDescending(v => v.Width).First();
+                if (Rank(best) == Rank(current) || !group.All(IsEligible))
+                {
+                    continue;
+                }
+
+                _logger.LogInformation("Making {Path} the default version", best.Path);
+                await _videoVersions.SplitAsync(current.Id, user, cancellationToken).ConfigureAwait(false);
+                best = _libraryManager.GetItemById(best.Id) as Video ?? best; // as the split left it
+                best.LinkedAlternateVersions = group.Where(v => v.Id != best.Id)
+                    .Select(v => new LinkedChild { ItemId = v.Id, Type = LinkedChildType.LinkedAlternateVersion })
+                    .ToArray();
+                await best.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
+                await _videoVersions.MergeAsync(group.Select(v => v.Id).ToArray(), user, cancellationToken).ConfigureAwait(false);
+                if (_libraryManager.GetItemById(best.Id) is Video { PrimaryVersionId: not null })
+                {
+                    _logger.LogWarning("Jellyfin kept another default version for {Path}", best.Path);
+                }
+            }
         }
 
         private List<Movie> GetMoviesFromLibrary()
